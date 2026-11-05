@@ -243,7 +243,7 @@
     for (const r of rows.slice(h + 1)) {
       const d = isIsoDate(r[0]) ? r[0] : (longDate(r[0]) ? iso(longDate(r[0])) : null);
       if (!d) continue;
-      out.push({ date: d, weight: num(r[2]), steps: num(r[3]), mi: num(r[4]), bed: r[5], wake: r[6], bedRel: clockToRel(r[5]), hours: num(r[7]), eff: num(r[8]) });
+      out.push({ date: d, weight: num(r[2]), steps: num(r[3]), mi: num(r[4]), bed: r[5], wake: r[6], bedRel: clockToRel(r[5]), hours: num(r[7]), eff: num(r[8]), sys: num(r[9]), dia: num(r[10]) });
     }
     return out.sort((a, b) => a.date.localeCompare(b.date));
   }
@@ -273,11 +273,12 @@
       for (const s of sleep) if (s.sleepMin) sMap.set(s.date, { date: s.date, hours: s.sleepMin / 60, bedRel: s.bedRel, score: s.score });
       const sleepHistory = [...sMap.values()].sort((a, b) => a.date.localeCompare(b.date));
       const steps = daily.filter(x => x.steps).map(x => ({ date: x.date, steps: x.steps, mi: x.mi }));
+      const bp = daily.filter(x => x.sys && x.dia).map(x => ({ date: x.date, sys: x.sys, dia: x.dia }));
       const sources = Object.fromEntries(keys.map(k => [k, raw[k].source]));
       return {
         sources,
         summary: parseSummary(raw.summary.rows),
-        sleep, sleepHistory, steps,
+        sleep, sleepHistory, steps, bp,
         workouts: parseWorkouts(raw.workouts.rows),
         nutrition: Object.values(food.days).sort((a, b) => a.date.localeCompare(b.date)),
         foodItems: food.items,

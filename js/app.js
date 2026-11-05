@@ -117,6 +117,18 @@
   }
 
   // ── pages ───────────────────────────────────────────────────
+  function bpTile(list, prev, note, cls = "c3") {
+    if (!list.length) return tile("Blood pressure", "–", "", "no readings");
+    const sA = avg(list.map(x => x.sys)), dA = avg(list.map(x => x.dia)), c = bpCat(sA, dA);
+    const pS = prev.length >= 3 ? avg(prev.map(x => x.sys)) : null;
+    const latest = list.at(-1);
+    return `<div class="card tile ${cls}">
+      <div class="label">Avg blood pressure</div>
+      <div class="value">${bpText(sA, dA)}<small>mmHg</small></div>
+      <div class="delta"><span class="pill" style="border-color:var(${c.color})"><span class="swatch" style="background:var(${c.color})"></span>${c.key}</span> ${[`${list.length} reading days`, note, `latest ${bpText(latest.sys, latest.dia)} on ${fmtDay(latest.date)}`, pS != null ? deltaText(sA, pS, " systolic", false) : ""].filter(Boolean).join(" · ")}</div>
+    </div>`;
+  }
+
   function renderOverview() {
     const d = state.data, end = lastDate();
     // Period follows the range buttons; "All" reaches back to the oldest record in any tab (2013)
@@ -152,6 +164,9 @@
     const nights7 = h7.filter(x => x.hours >= T.sleepHours).length;
     const st7 = window_(d.steps, end, N), stepAvg = avg(st7.map(x => x.steps)), stepPrev = orNull(avg(P(d.steps).map(x => x.steps)));
     const burnWk = sum(w7.map(x => x.kcal)) / weeks;
+    // BP: readings are sparse, so when the period has none, fall back to the latest 7 readings
+    let bpW = window_(d.bp, end, N), bpP = P(d.bp).length ? window_(d.bp, prevEnd, N) : [];
+    if (!bpW.length && d.bp.length) bpW = d.bp.slice(-7);
     const title = N === 7 ? "This week" : N === 365 ? "Last 12 months" : state.days ? `Last ${N} days` : "All data";
     const periodWord = state.days === 365 ? "over 12 months" : state.days ? `over ${N} days` : `since ${parse(firstDay).toLocaleDateString(undefined, { month: "short", year: "numeric" })}`;
     const joinD = (...parts) => parts.filter(Boolean).join(" · ");
@@ -160,13 +175,13 @@
 
     let html = `<h2>${title} <span class="sub" style="font-weight:400">· ${state.days ? `${N} days ending ${fmtLong(end)}${cmp ? `; arrows compare with the ${N} days before when both periods have data` : ""}` : `${fmtLong(firstDay)} – ${fmtLong(end)}`}</span></h2>
     <div class="grid">
-      ${tile("Avg sleep", hhmm(sleepAvg), "", joinD(`${h7.length.toLocaleString()} nights`, since(d.sleepHistory), deltaText(sleepAvg && sleepAvg / 60, sleepPrev && sleepPrev / 60, " h", true, 1)), sleepAvg / (T.sleepHours * 60) * 100)}
+      ${tile("Avg sleep", hhmm(sleepAvg), "", joinD(`${nights7.toLocaleString()} of ${h7.length.toLocaleString()} nights ≥ ${T.sleepHours} h`, since(d.sleepHistory), deltaText(sleepAvg && sleepAvg / 60, sleepPrev && sleepPrev / 60, " h", true, 1)), sleepAvg / (T.sleepHours * 60) * 100)}
       ${tile("Avg sleep score", round(scoreAvg), "/100", joinD(since(d.sleep) && `Garmin ${since(d.sleep)}`, deltaText(scoreAvg, scorePrev, " pts", true)))}
       ${tile("Avg protein", round(prot), "g", joinD(`${protDays} of ${n7.length} days ≥ ${T.protein} g`, since(d.nutrition) && `food log ${since(d.nutrition)}`, deltaText(prot, protPrev, " g", true)), prot / T.protein * 100)}
       ${tile("Avg intake", round(kcal), "kcal", joinD(since(d.nutrition) && `food log ${since(d.nutrition)}`, deltaText(kcal, kcalPrev, " kcal", null)))}
       ${tile("Training", round(hrs, 1), "h/week", joinD(`${w7.length} sessions`, since(d.workouts) && `log ${since(d.workouts)}`, deltaText(hrs, hrsPrev, " h", true, 1)))}
       ${tile("Weight", wt ? round(wt.weight, 1) : "–", "lb", wt && wStart && wStart.date !== wt.date ? `<span class="${wt.weight <= wStart.weight ? "down-good" : "up-bad"}">${wt.weight <= wStart.weight ? "▼" : "▲"} ${round(Math.abs(wt.weight - wStart.weight), 1)} lb</span> ${periodWord} · goal ${T.weightGoal}` : `goal ${T.weightGoal}`)}
-      ${tile("Nights ≥ 7 h", nights7.toLocaleString(), ` of ${h7.length.toLocaleString()}`, joinD(`${round(nights7 / Math.max(1, h7.length) * 100)}% of nights`, `HRV avg ${round(avg(s7.map(x => x.hrv)))} ms`))}
+      ${bpTile(bpW, bpP, since(d.bp))}
       ${tile("Avg steps", round(stepAvg), "/day", joinD(`${st7.filter(x => x.steps >= T.steps).length.toLocaleString()} of ${st7.length.toLocaleString()} days ≥ ${T.steps.toLocaleString()}`, since(d.steps), deltaText(stepAvg, stepPrev, "", true)), stepAvg / T.steps * 100)}
     </div>
     <div class="grid">
@@ -184,6 +199,17 @@
     const nu = inRange(d.nutrition);
     chart("ov-prot", { data: { labels: nu.map(x => fmtDay(x.date)), datasets: [bar("Protein (g)", nu.map(x => x.protein), css("--s3")), goal("Goal", nu.length, T.protein)] }, options: baseOpts({ plugins: { ...baseOpts().plugins, legend: { display: false } } }) });
   }
+
+  // American Heart Association categories (applied to each day's average reading)
+  const BP_CATS = [
+    { key: "Normal",   test: (s, d) => s < 120 && d < 80,  color: "--good",     tip: "under 120 / 80" },
+    { key: "Elevated", test: (s, d) => s < 130 && d < 80,  color: "--warn",     tip: "120–129 / under 80" },
+    { key: "Stage 1",  test: (s, d) => s < 140 && d < 90,  color: "--serious",  tip: "130–139 or 80–89" },
+    { key: "Stage 2",  test: (s, d) => s <= 180 && d <= 120, color: "--critical", tip: "140+ or 90+" },
+    { key: "Very high", test: () => true,                  color: "--critical", tip: "over 180 or over 120" },
+  ];
+  const bpCat = (s, d) => BP_CATS.find(c => c.test(s, d));
+  const bpText = (s, d) => s == null ? "–" : `${Math.round(s)}/${Math.round(d)}`;
 
   function scoreColor(s) {
     return s >= 80 ? css("--good") : s >= 60 ? css("--s1") : css("--serious");
@@ -489,6 +515,85 @@
     ] }, options: yOpts });
   }
 
+  // ── Blood pressure (Health Historical Daily: daily average of the day's readings) ──
+  function renderBP() {
+    const d = state.data, all = d.bp, list = inRange(all);
+    const end = lastDate(), N = state.days;
+    const prev = N ? window_(all, iso(addDays(parse(end), -N)), N) : [];
+    cmpLabel = `prior ${N} days`;
+    const sA = avg(list.map(x => x.sys)), dA = avg(list.map(x => x.dia));
+    const counts = BP_CATS.map(c => list.filter(x => bpCat(x.sys, x.dia) === c).length);
+    const under = list.filter(x => x.sys < 130 && x.dia < 80).length;
+    const monthly = list.length > 120;
+    const sM = monthly ? groupBy(list, "month", "sys") : null, dM = monthly ? groupBy(list, "month", "dia") : null;
+    const years = groupBy(all, "year", "sys").map(g => {
+      const rows = all.filter(x => x.date.startsWith(g.key));
+      const dd = avg(rows.map(x => x.dia));
+      return { year: g.key, n: rows.length, sys: g.avg, dia: dd, cat: bpCat(g.avg, dd).key, maxS: g.max, maxD: Math.max(...rows.map(x => x.dia)), normal: rows.filter(x => bpCat(x.sys, x.dia).key === "Normal").length };
+    });
+    // weight vs BP: months with both
+    const wMo = new Map(groupBy(d.weights, "month", "weight").map(g => [g.key, g.avg]));
+    const pairs = groupBy(all, "month", "sys").filter(g => wMo.has(g.key)).map(g => ({ k: g.key, w: wMo.get(g.key), s: g.avg }));
+    const r = corr(pairs.map(p => p.w), pairs.map(p => p.s));
+
+    $("#page-bp").innerHTML = `<h2>Blood pressure</h2>
+    <p class="sub">Daily averages from the Health Historical Daily tab (${all.length} days with readings, ${fmtLong(all[0]?.date || end)} – ${fmtLong(all.at(-1)?.date || end)}). Categories follow the American Heart Association ranges and are applied to each day's average.</p>
+    ${list.length ? `<div class="grid">
+      ${bpTile(list, prev, "", "c3")}
+      ${tile("Reading days", list.length.toLocaleString(), "", `${rangeLabel()}${list.length ? ` · since ${fmtDay(list[0].date)}${list[0].date.slice(0, 4) !== end.slice(0, 4) ? ", " + list[0].date.slice(0, 4) : ""}` : ""}`)}
+      ${tile("Under 130/80", round(under / list.length * 100), "%", `${under} of ${list.length} days in Normal or Elevated`, under / list.length * 100)}
+      ${tile("Highest day", bpText(Math.max(...list.map(x => x.sys)), list.find(x => x.sys === Math.max(...list.map(y => y.sys))).dia), "mmHg", fmtLong(list.find(x => x.sys === Math.max(...list.map(y => y.sys))).date))}
+    </div>
+    <div class="grid">
+      ${card("c8", "Systolic and diastolic", `${rangeLabel()} · ${monthly ? "monthly averages" : "each day's average, line = 7-reading average"} · dashed = 130 and 80`, canvas("bp-trend", "tall"))}
+      ${card("c4", "Days by category", rangeLabel(), `${canvas("bp-cats", "tall")}`)}
+    </div>` : `<p class="sub">No readings in ${rangeLabel()}. Try a longer range.</p>`}
+    <div class="grid">
+      ${card("c12", "Year by year", "All readings", sortableTable("bp-years", [
+        { key: "year", label: "Year" }, { key: "n", label: "Reading days", num: 1 },
+        { key: "sys", label: "Avg", num: 1, fmt: (v, r) => bpText(v, r.dia) },
+        { key: "cat", label: "Category", fmt: v => { const c = BP_CATS.find(x => x.key === v); return `<span class="swatch" style="background:var(${c.color})"></span>${v}`; } },
+        { key: "normal", label: "Normal days", num: 1, fmt: (v, r) => `${v} of ${r.n}` },
+        { key: "maxS", label: "Highest", num: 1, fmt: (v, r) => `${Math.round(v)}/${Math.round(r.maxD)}` },
+      ], years, "year"))}
+    </div>
+    ${pairs.length >= 8 && r != null ? `<div class="grid">${card("c12", "Weight and blood pressure", `Monthly averages for ${pairs.length} months with both · correlation ${round(r, 2)} (${Math.abs(r) < 0.3 ? "weak" : Math.abs(r) < 0.6 ? "moderate" : "strong"}${r > 0 ? ", heavier months tend to run higher" : r < 0 ? ", heavier months tend to run lower" : ""})`, canvas("bp-wt", ""))}</div>` : ""}`;
+
+    if (!list.length) return;
+    const lbls = monthly ? sM.map(g => fmtMonth(g.key)) : list.map(x => fmtDay(x.date));
+    const S = monthly ? sM.map(g => +g.avg.toFixed(1)) : list.map(x => x.sys), D = monthly ? dM.map(g => +g.avg.toFixed(1)) : list.map(x => x.dia);
+    const o = baseOpts(); o.scales.y.beginAtZero = false; o.scales.y.suggestedMin = 60; o.scales.y.suggestedMax = 160;
+    o.plugins.tooltip = { ...o.plugins.tooltip, filter: i => i.datasetIndex < 2 || !monthly && i.datasetIndex < 4, callbacks: { afterBody: items => { const i = items[0].dataIndex; const c = bpCat(S[i], D[i]); return `${bpText(S[i], D[i])} · ${c.key}${monthly ? ` · ${sM[i].values.length} days` : ""}`; } } };
+    chart("bp-trend", { data: { labels: lbls, datasets: [
+      ...(monthly ? [
+        line("Systolic", S, css("--s2"), { pointRadius: S.length < 40 ? 3 : 0, tension: 0.2 }),
+        line("Diastolic", D, css("--s1"), { pointRadius: D.length < 40 ? 3 : 0, tension: 0.2 }),
+      ] : [
+        line("Systolic (7-reading avg)", rolling(S, 7), css("--s2")),
+        line("Diastolic (7-reading avg)", rolling(D, 7), css("--s1")),
+        line("Systolic", S, css("--s2") + "66", { showLine: false, pointRadius: 3, pointHoverRadius: 5 }),
+        line("Diastolic", D, css("--s1") + "66", { showLine: false, pointRadius: 3, pointHoverRadius: 5 }),
+      ]),
+      goal("130", lbls.length, 130, css("--muted")), goal("80", lbls.length, 80, css("--muted")),
+    ] }, options: { ...o, plugins: { ...o.plugins, legend: { ...o.plugins.legend, labels: { ...o.plugins.legend.labels, filter: it => !/^\d+$/.test(it.text) && !(!monthly && !/avg/.test(it.text)) } } } } });
+
+    const shown = BP_CATS.map((c, i) => ({ c, n: counts[i] })).filter(x => x.n);
+    const co = baseOpts({ indexAxis: "y", interaction: { mode: "nearest", axis: "y", intersect: false } });
+    co.scales = { x: { ...co.scales.y }, y: { ...co.scales.x, ticks: { color: css("--ink-2") } } };
+    co.plugins.legend = { display: false };
+    co.plugins.tooltip = { ...co.plugins.tooltip, callbacks: { label: c => `${c.parsed.x} days (${round(c.parsed.x / list.length * 100)}%) · ${shown[c.dataIndex].c.tip}` } };
+    chart("bp-cats", { type: "bar", data: { labels: shown.map(x => x.c.key), datasets: [bar("Days", shown.map(x => x.n), shown.map(x => css(x.c.color)), { maxBarThickness: 28 })] }, options: co });
+
+    if (pairs.length >= 8 && r != null) {
+      const po = baseOpts({ interaction: { mode: "nearest", intersect: true } });
+      po.scales.x = { ...po.scales.x, type: "linear", title: { display: true, text: "Weight (lb, monthly avg)", color: css("--muted") } };
+      po.scales.y = { ...po.scales.y, beginAtZero: false, title: { display: true, text: "Systolic (monthly avg)", color: css("--muted") } };
+      po.plugins.legend = { display: false };
+      po.plugins.tooltip = { ...po.plugins.tooltip, callbacks: { label: c => `${fmtMonth(pairs[c.dataIndex].k)}: ${round(pairs[c.dataIndex].w, 1)} lb, ${Math.round(pairs[c.dataIndex].s)} systolic` } };
+      chart("bp-wt", { type: "scatter", data: { datasets: [{ data: pairs.map(p => ({ x: p.w, y: p.s })), backgroundColor: css("--s2"), pointRadius: 5, pointHoverRadius: 7, borderColor: css("--surface"), borderWidth: 1.5 }] }, options: po });
+    }
+  }
+
   // ── History: every day since 2013 from the Health Historical Daily tab ──
   let histYears = 0; // 0 = all
   function renderHistory() {
@@ -498,11 +603,13 @@
     const W = d.weights.filter(x => x.date >= from), S = d.steps.filter(x => x.date >= from), Z = d.sleepHistory.filter(x => x.date >= from);
     const period = "month";
     const wM = groupBy(W, period, "weight"), sM = groupBy(S, period, "steps"), zM = groupBy(Z, period, "hours");
+    const B = d.bp.filter(x => x.date >= from), bpS = groupBy(B, "month", "sys"), bpD = groupBy(B, "month", "dia");
     const yrKeys = [...new Set([...d.weights, ...d.steps, ...d.sleepHistory].map(x => x.date.slice(0, 4)))].sort().reverse();
     const yrRows = yrKeys.map(y => {
       const w = d.weights.filter(x => x.date.startsWith(y)), st = d.steps.filter(x => x.date.startsWith(y)), z = d.sleepHistory.filter(x => x.date.startsWith(y));
       const best = st.reduce((a, b) => (b.steps > (a?.steps || 0) ? b : a), null);
-      return { year: y, wAvg: avg(w.map(x => x.weight)), wMin: w.length ? Math.min(...w.map(x => x.weight)) : null, wMax: w.length ? Math.max(...w.map(x => x.weight)) : null,
+      const b = d.bp.filter(x => x.date.startsWith(y));
+      return { year: y, bpS: avg(b.map(x => x.sys)), bpD: avg(b.map(x => x.dia)), bpN: b.length, wAvg: avg(w.map(x => x.weight)), wMin: w.length ? Math.min(...w.map(x => x.weight)) : null, wMax: w.length ? Math.max(...w.map(x => x.weight)) : null,
         stAvg: avg(st.map(x => x.steps)), st10k: st.filter(x => x.steps >= T.steps).length, stDays: st.length, mi: sum(st.map(x => x.mi)),
         zAvg: avg(z.map(x => x.hours)), z7: z.filter(x => x.hours >= T.sleepHours).length, zN: z.length, bestDay: best?.date, bestSteps: best?.steps };
     });
@@ -531,12 +638,14 @@
       ${card("c6", "Steps by month", `Average per day · dashed = ${T.steps.toLocaleString()}`, canvas("hi-steps"))}
       ${card("c6", "Sleep by month", `Average hours asleep · dashed = ${T.sleepHours} h`, canvas("hi-sleep"))}
     </div>
+    ${bpS.length ? `<div class="grid">${card("c12", "Blood pressure by month", "Monthly average · dashed = 130 / 80 · details on the BP page", canvas("hi-bp"))}</div>` : ""}
     <div class="grid">${card("c12", "Year by year", "All years · click a column to sort", sortableTable("hi-years", [
       { key: "year", label: "Year" },
       { key: "wAvg", label: "Avg lb", num: 1, fmt: v => v ? round(v, 1) : "–" }, { key: "wMin", label: "Min lb", num: 1, fmt: v => v ? round(v, 1) : "–" }, { key: "wMax", label: "Max lb", num: 1, fmt: v => v ? round(v, 1) : "–" },
       { key: "stAvg", label: "Steps/day", num: 1, fmt: v => v ? round(v) : "–" }, { key: "st10k", label: "10k+ days", num: 1, fmt: (v, r) => r.stDays ? `${v} of ${r.stDays}` : "–" },
       { key: "mi", label: "Miles", num: 1, fmt: v => v ? round(v) : "–" },
       { key: "zAvg", label: "Sleep/night", num: 1, fmt: v => v ? hhmm(v * 60) : "–" }, { key: "z7", label: "7h+ nights", num: 1, fmt: (v, r) => r.zN ? `${v} of ${r.zN}` : "–" },
+      { key: "bpS", label: "Avg BP", num: 1, fmt: (v, r) => v ? `${bpText(v, r.bpD)} <span class="sub">${r.bpN} d</span>` : "–" },
       { key: "bestSteps", label: "Biggest day", num: 1, fmt: (v, r) => v ? `${round(v)} <span class="sub">${fmtDay(r.bestDay)}</span>` : "–" },
     ], yrRows, "year"))}</div>`;
 
@@ -551,6 +660,15 @@
     chart("hi-steps", { data: { labels: lbl(sM), datasets: [goal("10k", sM.length, T.steps, css("--good")), bar("Steps/day", sM.map(g => Math.round(g.avg)), sM.map(g => g.avg >= T.steps ? css("--s6") : css("--s6") + "88"), { maxBarThickness: 14 })] }, options: o2 });
     const o3 = baseOpts({ plugins: { ...baseOpts().plugins, legend: { display: false }, tooltip: { ...baseOpts().plugins.tooltip, callbacks: { label: c => c.datasetIndex === 1 ? `${hhmm(c.parsed.y * 60)} avg (${zM[c.dataIndex].values.length} nights)` : `${T.sleepHours} h target` } } } });
     o3.scales.y.suggestedMax = 8;
+    if (bpS.length) {
+      const ob = baseOpts(); ob.scales.y.beginAtZero = false; ob.scales.y.suggestedMin = 60;
+      ob.plugins.legend.labels = { ...ob.plugins.legend.labels, filter: it => !/^\d+$/.test(it.text) };
+      chart("hi-bp", { data: { labels: bpS.map(g => fmtMonth(g.key)), datasets: [
+        line("Systolic", bpS.map(g => +g.avg.toFixed(1)), css("--s2"), { pointRadius: bpS.length < 40 ? 3 : 0, tension: 0.2 }),
+        line("Diastolic", bpD.map(g => +g.avg.toFixed(1)), css("--s1"), { pointRadius: bpD.length < 40 ? 3 : 0, tension: 0.2 }),
+        goal("130", bpS.length, 130, css("--muted")), goal("80", bpS.length, 80, css("--muted")),
+      ] }, options: ob });
+    }
     chart("hi-sleep", { data: { labels: lbl(zM), datasets: [goal("7 h", zM.length, T.sleepHours, css("--good")), bar("Hours", zM.map(g => +g.avg.toFixed(2)), css("--s7"), { maxBarThickness: 14 })] }, options: o3 });
   }
 
@@ -597,7 +715,7 @@
   }
 
   // ── shell ───────────────────────────────────────────────────
-  const PAGES = { overview: renderOverview, sleep: renderSleep, nutrition: renderNutrition, training: renderTraining, body: renderBody, history: renderHistory, races: renderRaces };
+  const PAGES = { overview: renderOverview, sleep: renderSleep, nutrition: renderNutrition, training: renderTraining, body: renderBody, bp: renderBP, history: renderHistory, races: renderRaces };
 
   function render() {
     state.charts.forEach(c => c.destroy()); state.charts = [];

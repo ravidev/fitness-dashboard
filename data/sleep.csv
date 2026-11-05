@@ -1,4 +1,5 @@
 Date,Bedtime (PT),Wake Time (PT),Sleep,Deep (min),Light (min),REM (min),Awake (min),Score,Score Label,Overnight HRV (ms),Afternoon Nap,Total Sleep,Nap-Adjusted Score,Nap-Adjusted Label,See notes below table ↓
+2026-11-05,22:59,05:41,6h 34m,109,198,87,8,80,GOOD,39,0,6h 34m,80,GOOD,
 2026-11-04,00:18,05:56,5h 14m,85,176,53,24,68,FAIR,32,0,5h 14m,68,FAIR,
 2026-11-03,00:45,07:18,6h 24m,61,269,54,9,75,FAIR,36,0,6h 24m,75,FAIR,
 2026-11-02,22:11,08:03,7h 22m,57,283,102,150,51,POOR,36,0,7h 22m,51,POOR,

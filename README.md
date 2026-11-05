@@ -9,6 +9,7 @@ A static website that turns the **Ravi Fitness – Sleep, Workouts & Food** Goog
 | **Nutrition** | Calories vs FITTR target, protein vs 140 g, macro split, calories by time of day, weekly averages, top foods |
 | **Training** | Weekly hours by sport, sport mix, activity calendar, totals, filterable workout log |
 | **Body** | Weight trend vs goal (DailyStats + historical weigh-ins), profile/DEXA, weight by year |
+| **BP** | Blood pressure from *Health Historical Daily* (2021–): average and AHA category, trend vs 130/80, days per category, year by year, weight vs BP |
 | **History** | Every day since 2013 from *Health Historical Daily*: monthly weight, steps and sleep, long-term patterns, year-by-year table |
 | **Races** | Upcoming races with countdown, completed per year, full history |
 
@@ -53,6 +54,7 @@ python3 -m http.server 8000   # then open http://localhost:8000
 - **Weight:** *Health Historical Daily* fills the history; *DailyStats* wins for any date it has.
 - **Sleep:** the Garmin *Sleep* tab wins for any night it has; older nights come from *Health Historical Daily*.
 - **Steps:** *Health Historical Daily* only.
+- **Blood pressure:** *Health Historical Daily* only (each day's average reading).
 
 ## Customising
 - **Targets** (2,004 kcal, 140 g protein, 7 h sleep, 160 lb goal…): `targets` in `js/config.js`.
