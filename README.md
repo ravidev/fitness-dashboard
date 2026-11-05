@@ -8,7 +8,8 @@ A static website that turns the **Ravi Fitness – Sleep, Workouts & Food** Goog
 | **Sleep** | Time asleep vs 7 h, stages, score labels, HRV trend, bedtime vs score, nightly table |
 | **Nutrition** | Calories vs FITTR target, protein vs 140 g, macro split, calories by time of day, weekly averages, top foods |
 | **Training** | Weekly hours by sport, sport mix, activity calendar, totals, filterable workout log |
-| **Body** | Weight trend vs goal, profile/DEXA, weight and sleep by year (2013–2026, Google Health) |
+| **Body** | Weight trend vs goal (DailyStats + historical weigh-ins), profile/DEXA, weight by year |
+| **History** | Every day since 2013 from *Health Historical Daily*: monthly weight, steps and sleep, long-term patterns, year-by-year table |
 | **Races** | Upcoming races with countdown, completed per year, full history |
 
 Every page has a 7d / 30d / 90d / All range, dark mode, and sortable tables. No build step: plain HTML, CSS and JavaScript ([Chart.js](https://www.chartjs.org/) + [PapaParse](https://www.papaparse.com/) from a CDN).
@@ -48,6 +49,11 @@ python3 -m http.server 8000   # then open http://localhost:8000
 ```
 (Opening `index.html` directly won't load the CSVs; browsers block that.)
 
+## Merge rules
+- **Weight:** *Health Historical Daily* fills the history; *DailyStats* wins for any date it has.
+- **Sleep:** the Garmin *Sleep* tab wins for any night it has; older nights come from *Health Historical Daily*.
+- **Steps:** *Health Historical Daily* only.
+
 ## Customising
 - **Targets** (2,004 kcal, 140 g protein, 7 h sleep, 160 lb goal…): `targets` in `js/config.js`.
 - **Sheet layout:** parsers in `js/data.js` find each tab's header row by its first cell (`Date`), carry dates down to blank-date rows (Workouts, Food Log), and read numbers out of text like `1,251 (Strava)` or `1:14:36 (moving)`. If you rename or reorder columns in a tab, update the matching parser.
@@ -61,6 +67,7 @@ js/config.js          sheet IDs, tab gids, targets
 js/data.js            fetching + parsing each tab
 js/app.js             pages, charts, insights
 data/*.csv            snapshot of each tab (fallback + history)
+scripts/xlsx2csv.py   turn an .xlsx export of the sheet into the /data CSVs
 scripts/snapshot.mjs  downloads tabs into /data
 .github/workflows/    daily snapshot job
 ```

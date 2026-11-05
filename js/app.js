@@ -129,6 +129,7 @@
     const protDays = n7.filter(x => x.protein >= T.protein).length;
     const wt = d.weights.at(-1), wt30 = d.weights.find(x => x.date >= iso(addDays(parse(end), -29)));
     const nights7 = s7.filter(x => x.sleepMin >= T.sleepHours * 60).length;
+    const st7 = window_(d.steps, end, 7), stepAvg = avg(st7.map(x => x.steps)), stepPrev = avg(window_(d.steps, prevEnd, 7).map(x => x.steps));
 
     const upcoming = d.races.filter(r => r.d >= today() && r.registered).slice(0, 4);
 
@@ -140,8 +141,8 @@
       ${tile("Avg intake", round(kcal), "kcal", deltaText(kcal, kcalPrev, " kcal", null))}
       ${tile("Training", round(hrs, 1), "h", `${w7.length} sessions · ${deltaText(hrs, hrsPrev, " h", true, 1)}`)}
       ${tile("Weight", wt ? round(wt.weight, 1) : "–", "lb", wt && wt30 ? `<span class="${wt.weight <= wt30.weight ? "down-good" : "up-bad"}">${wt.weight <= wt30.weight ? "▼" : "▲"} ${round(Math.abs(wt.weight - wt30.weight), 1)} lb</span> over 30 days · goal ${T.weightGoal}` : "")}
-      ${tile("Nights ≥ 7 h", nights7, ` of ${s7.length}`, `HRV avg ${round(avg(s7.map(x => x.hrv)))} ms`)}
-      ${tile("Activity burn", round(sum(w7.map(x => x.kcal))), "kcal", deltaText(sum(w7.map(x => x.kcal)), sum(w7p.map(x => x.kcal)), " kcal", true))}
+      ${tile("Nights ≥ 7 h", nights7, ` of ${s7.length}`, `HRV avg ${round(avg(s7.map(x => x.hrv)))} ms · ${round(sum(w7.map(x => x.kcal)))} kcal exercise`)}
+      ${tile("Avg steps", round(stepAvg), "/day", `${st7.filter(x => x.steps >= T.steps).length} of ${st7.length} days ≥ ${T.steps.toLocaleString()} · ${deltaText(stepAvg, stepPrev, "", true)}`, stepAvg / T.steps * 100)}
     </div>
     <div class="grid">
       ${card("c7", "What the data says", `Patterns across ${rangeLabel()}`, `<ul class="insights">${insights().join("")}</ul>`)}
@@ -358,6 +359,7 @@
       ${card("c8", "Weekly training hours by sport", "Mon–Sun weeks", canvas("tr-week", "tall"))}
       ${card("c4", "Mix by sport", "Hours", canvas("tr-mix", "tall"))}
     </div>
+    <div class="grid">${card("c12", "Daily steps", `${rangeLabel()} · dashed = ${T.steps.toLocaleString()} · line = 7-day average`, canvas("tr-steps", "short"))}</div>
     <div class="grid">${card("c12", "Activity calendar", "Each square is a day, darker = more exercise calories", calendar())}</div>
     <div class="grid">${card("c12", "Sport totals", rangeLabel(), sortableTable("tr-tot", [
       { key: "sport", label: "Sport", fmt: v => `<span class="swatch" style="background:${sportColor(v)}"></span>${v}` },
@@ -381,6 +383,12 @@
     drawLog();
     $("#tr-filters").onclick = e => { const b = e.target.closest(".chip"); if (!b) return; trainFilter = b.dataset.s; $("#tr-filters").querySelectorAll(".chip").forEach(c => c.classList.toggle("on", c === b)); drawLog(); };
 
+    const st = inRange(d.steps);
+    chart("tr-steps", { data: { labels: st.map(x => fmtDay(x.date)), datasets: [
+      line("7-day avg", rolling(st.map(x => x.steps), 7), css("--ink-2")),
+      goal(`${T.steps.toLocaleString()} steps`, st.length, T.steps, css("--good")),
+      bar("Steps", st.map(x => x.steps), st.map(x => x.steps >= T.steps ? css("--s6") : css("--s6") + "88")),
+    ] }, options: baseOpts({ plugins: { ...baseOpts().plugins, legend: { display: false } } }) });
     const wkOpts = baseOpts(); wkOpts.scales.x.stacked = true; wkOpts.scales.y.stacked = true;
     wkOpts.plugins.tooltip = { ...wkOpts.plugins.tooltip, filter: i => i.parsed.y > 0, callbacks: { label: c => `${c.dataset.label}: ${round(c.parsed.y, 1)} h`, footer: items => `Total: ${round(sum(items.map(i => i.parsed.y)), 1)} h` } };
     chart("tr-week", { type: "bar", data: { labels: weeks.map(w => fmtDay(w)), datasets: present.map(s => bar(s, weeks.map(w => sum(bySport[s].filter(x => weekStart(x.date) === w).map(x => x.min)) / 60), sportColor(s), { borderRadius: 0, borderColor: css("--surface"), borderWidth: { top: 2 }, maxBarThickness: 40 })) }, options: wkOpts });
@@ -404,43 +412,121 @@
     return `<div class="cal">${cells}</div><div class="cal-legend"><i style="background:var(--grid)"></i> Rest ${steps.slice(1).map(c => `<i style="background:${c}"></i>`).join("")} 1,000+ kcal</div>`;
   }
 
+  // group daily records into periods ("week" | "month" | "year") -> [{key, values}]
+  function groupBy(list, period, field) {
+    const m = new Map();
+    for (const r of list) {
+      const v = r[field]; if (v == null || isNaN(v)) continue;
+      const k = period === "year" ? r.date.slice(0, 4) : period === "month" ? r.date.slice(0, 7) : weekStart(r.date);
+      (m.get(k) || m.set(k, []).get(k)).push(v);
+    }
+    return [...m].sort((a, b) => a[0].localeCompare(b[0])).map(([key, values]) => ({ key, values, avg: avg(values), min: Math.min(...values), max: Math.max(...values) }));
+  }
+  const fmtMonth = k => new Date(+k.slice(0, 4), +k.slice(5, 7) - 1, 1).toLocaleDateString(undefined, { month: "short", year: "numeric" });
+
   function renderBody() {
-    const d = state.data, wt = inRange(d.weights), s = d.summary;
-    const hw = d.health.weight || [];
+    const d = state.data, wtAll = inRange(d.weights), s = d.summary;
+    // long ranges: weekly averages keep the chart readable
+    const weekly = wtAll.length > 150;
+    const wt = weekly ? groupBy(wtAll, "week", "weight").map(g => ({ date: g.key, weight: +g.avg.toFixed(1) })) : wtAll;
+    const last = d.weights.at(-1);
+    const years = groupBy(d.weights, "year", "weight");
     $("#page-body").innerHTML = `<h2>Body</h2>
     <div class="grid">
-      ${tile("Latest weight", round(wt.at(-1)?.weight, 1), "lb", wt.length ? fmtLong(wt.at(-1).date) : "")}
-      ${tile(`Change (${rangeLabel()})`, wt.length > 1 ? (wt.at(-1).weight - wt[0].weight > 0 ? "+" : "") + round(wt.at(-1).weight - wt[0].weight, 1) : "–", "lb", wt.length > 1 ? `from ${round(wt[0].weight, 1)} on ${fmtDay(wt[0].date)}` : "")}
-      ${tile("To goal", wt.length ? round(wt.at(-1).weight - T.weightGoal, 1) : "–", "lb", `goal ~${T.weightGoal} lb by Jul 2027`)}
-      ${tile("Range", wt.length ? `${round(Math.min(...wt.map(x => x.weight)), 1)}–${round(Math.max(...wt.map(x => x.weight)), 1)}` : "–", "lb", `${wt.length} weigh-ins`)}
+      ${tile("Latest weight", round(last?.weight, 1), "lb", last ? fmtLong(last.date) : "")}
+      ${tile(`Change (${rangeLabel()})`, wtAll.length > 1 ? (wtAll.at(-1).weight - wtAll[0].weight > 0 ? "+" : "") + round(wtAll.at(-1).weight - wtAll[0].weight, 1) : "–", "lb", wtAll.length > 1 ? `from ${round(wtAll[0].weight, 1)} on ${fmtDay(wtAll[0].date)}` : "")}
+      ${tile("To goal", last ? round(last.weight - T.weightGoal, 1) : "–", "lb", `goal ~${T.weightGoal} lb by Jul 2027`)}
+      ${tile("Range", wtAll.length ? `${round(Math.min(...wtAll.map(x => x.weight)), 1)}–${round(Math.max(...wtAll.map(x => x.weight)), 1)}` : "–", "lb", `${wtAll.length.toLocaleString()} weigh-ins`)}
     </div>
     <div class="grid">
-      ${card("c8", "Weight", `${rangeLabel()} · line = 7-reading average · dashed = goal`, canvas("bd-wt", "tall"))}
+      ${card("c8", "Weight", `${rangeLabel()} · ${weekly ? "weekly averages" : "line = 7-reading average"} · dashed = goal`, canvas("bd-wt", "tall"))}
       ${card("c4", "Profile & goals", "From the Summary tab", `<dl class="kv">${["Goal", "Targets", "Body composition (Kalos DEXA Oct 5, 2026)", "Height", "Age"].filter(k => s[k]).map(k => `<dt>${esc(k.replace(/\s*\(.*\)/, ""))}</dt><dd>${esc(s[k])}${/DEXA/.test(k) ? '<br><span class="sub">DEXA Oct 5, 2026</span>' : ""}</dd>`).join("")}</dl>`)}
     </div>
     <div class="grid">
-      ${card("c12", "Weight by year, 2013–2026", "Google Health (Aria scale) · bar spans min to max, dot = average", canvas("bd-years", "tall"))}
-    </div>
-    ${(d.health.sleep || []).length ? `<div class="grid">${card("c12", "Sleep by year", "Google Health (Fitbit) · average time asleep per night", canvas("bd-sleepyr", "short"))}</div>` : ""}`;
+      ${card("c12", `Weight by year, ${years[0]?.key}–${years.at(-1)?.key}`, "Daily weigh-ins · bar spans lightest to heaviest, dot = average · see History for more", canvas("bd-years", "tall"))}
+    </div>`;
 
     const wOpts = baseOpts(); wOpts.scales.y.beginAtZero = false;
-    chart("bd-wt", { data: { labels: wt.map(x => fmtDay(x.date)), datasets: [
+    chart("bd-wt", { data: { labels: wt.map(x => weekly ? `wk ${fmtDay(x.date)}${state.days ? "" : " " + x.date.slice(2, 4)}` : fmtDay(x.date)), datasets: weekly ? [
+      line("Weekly avg", wt.map(x => x.weight), css("--s1"), { tension: 0.2 }),
+      goal("Goal", wt.length, T.weightGoal, css("--good")),
+    ] : [
       line("Weigh-in", wt.map(x => x.weight), css("--s1") + "88", { pointRadius: 3, tension: 0, borderWidth: 1 }),
       line("7-reading avg", rolling(wt.map(x => x.weight), 7), css("--s1")),
       goal("Goal", wt.length, T.weightGoal, css("--good")),
     ] }, options: wOpts });
 
-    const yrs = [...hw].sort((a, b) => a.Year - b.Year);
     const yOpts = baseOpts(); yOpts.scales.y.beginAtZero = false;
-    yOpts.plugins.tooltip = { ...yOpts.plugins.tooltip, callbacks: { label: c => c.datasetIndex === 0 ? `Range: ${c.raw[0]}–${c.raw[1]} lb` : `Average: ${c.parsed.y} lb (${yrs[c.dataIndex].Readings} readings)` } };
-    chart("bd-years", { data: { labels: yrs.map(y => y.Year), datasets: [
-      bar("Min–max", yrs.map(y => [+y["Min lb"], +y["Max lb"]]), css("--s1") + "44", { borderSkipped: false, maxBarThickness: 28 }),
-      line("Average", yrs.map(y => +y["Avg lb"]), css("--s1"), { pointRadius: 4, tension: 0 }),
+    yOpts.plugins.tooltip = { ...yOpts.plugins.tooltip, callbacks: { label: c => c.datasetIndex === 0 ? `Range: ${round(c.raw[0], 1)}–${round(c.raw[1], 1)} lb` : `Average: ${round(c.parsed.y, 1)} lb (${years[c.dataIndex].values.length} days)` } };
+    chart("bd-years", { data: { labels: years.map(y => y.key), datasets: [
+      bar("Lightest–heaviest", years.map(y => [y.min, y.max]), css("--s1") + "44", { borderSkipped: false, maxBarThickness: 28 }),
+      line("Average", years.map(y => +y.avg.toFixed(1)), css("--s1"), { pointRadius: 4, tension: 0 }),
     ] }, options: yOpts });
+  }
 
-    const sy = [...(d.health.sleep || [])].sort((a, b) => a.Year - b.Year);
-    if (sy.length) chart("bd-sleepyr", { data: { labels: sy.map(y => y.Year), datasets: [goal(`${T.sleepHours} h`, sy.length, T.sleepHours, css("--good")), bar("Hours asleep", sy.map(y => +y["Avg time asleep (hrs)"]), css("--s7"))] },
-      options: baseOpts({ plugins: { ...baseOpts().plugins, legend: { display: false } } }) });
+  // ── History: every day since 2013 from the Health Historical Daily tab ──
+  let histYears = 0; // 0 = all
+  function renderHistory() {
+    const d = state.data;
+    const lastD = d.weights.at(-1)?.date > d.steps.at(-1)?.date ? d.weights.at(-1).date : d.steps.at(-1)?.date || lastDate();
+    const from = histYears ? iso(addDays(parse(lastD), -365 * histYears)) : "0000";
+    const W = d.weights.filter(x => x.date >= from), S = d.steps.filter(x => x.date >= from), Z = d.sleepHistory.filter(x => x.date >= from);
+    const period = "month";
+    const wM = groupBy(W, period, "weight"), sM = groupBy(S, period, "steps"), zM = groupBy(Z, period, "hours");
+    const yrKeys = [...new Set([...d.weights, ...d.steps, ...d.sleepHistory].map(x => x.date.slice(0, 4)))].sort().reverse();
+    const yrRows = yrKeys.map(y => {
+      const w = d.weights.filter(x => x.date.startsWith(y)), st = d.steps.filter(x => x.date.startsWith(y)), z = d.sleepHistory.filter(x => x.date.startsWith(y));
+      const best = st.reduce((a, b) => (b.steps > (a?.steps || 0) ? b : a), null);
+      return { year: y, wAvg: avg(w.map(x => x.weight)), wMin: w.length ? Math.min(...w.map(x => x.weight)) : null, wMax: w.length ? Math.max(...w.map(x => x.weight)) : null,
+        stAvg: avg(st.map(x => x.steps)), st10k: st.filter(x => x.steps >= T.steps).length, stDays: st.length, mi: sum(st.map(x => x.mi)),
+        zAvg: avg(z.map(x => x.hours)), z7: z.filter(x => x.hours >= T.sleepHours).length, zN: z.length, bestDay: best?.date, bestSteps: best?.steps };
+    });
+    const yrsWithSteps = yrRows.filter(r => r.stDays >= 200), yrsWithSleep = yrRows.filter(r => r.zN >= 150);
+    const bestStepYr = yrsWithSteps.reduce((a, b) => (b.stAvg > (a?.stAvg || 0) ? b : a), null);
+    const bestSleepYr = yrsWithSleep.reduce((a, b) => (b.zAvg > (a?.zAvg || 0) ? b : a), null);
+    const thisYr = yrRows[0];
+    const span = `${fmtLong(W[0]?.date || S[0]?.date || lastD)} – ${fmtLong(lastD)}`;
+
+    $("#page-history").innerHTML = `<h2>History</h2>
+    <div class="filters" id="hist-range">${[[1, "1 year"], [3, "3 years"], [5, "5 years"], [0, "All since 2013"]].map(([y, l]) => `<button class="chip ${y === histYears ? "on" : ""}" data-y="${y}">${l}</button>`).join("")}</div>
+    <p class="sub">${span} · Google Health (Fitbit/Aria) history merged with your Garmin and DailyStats data; where both have a day, DailyStats and the Sleep tab win.</p>
+    <div class="grid">
+      ${tile("Weigh-ins", W.length.toLocaleString(), "", W.length ? `avg ${round(avg(W.map(x => x.weight)), 1)} lb · ${round(Math.min(...W.map(x => x.weight)), 1)}–${round(Math.max(...W.map(x => x.weight)), 1)}` : "")}
+      ${tile("Avg steps", round(avg(S.map(x => x.steps))), "/day", `${S.filter(x => x.steps >= T.steps).length.toLocaleString()} of ${S.length.toLocaleString()} days ≥ ${T.steps.toLocaleString()}`)}
+      ${tile("Avg sleep", hhmm(avg(Z.map(x => x.hours)) * 60), "", `${Z.filter(x => x.hours >= T.sleepHours).length.toLocaleString()} of ${Z.length.toLocaleString()} nights ≥ ${T.sleepHours} h`)}
+      ${tile("Distance walked/run", round(sum(S.map(x => x.mi))), "mi", "from step tracking")}
+    </div>
+    <div class="grid">${card("c12", "Long-term patterns", "", `<ul class="insights">
+      ${bestStepYr ? li("info", "★", `Most active year: <b>${bestStepYr.year}</b>, averaging <b>${round(bestStepYr.stAvg)}</b> steps/day${thisYr?.stAvg ? ` (this year: ${round(thisYr.stAvg)})` : ""}.`) : ""}
+      ${bestSleepYr ? li("info", "z", `Best sleep year: <b>${bestSleepYr.year}</b> at <b>${hhmm(bestSleepYr.zAvg * 60)}</b> a night.${yrsWithSleep.some(r => r.zAvg >= T.sleepHours) ? "" : ` No year has averaged ${T.sleepHours} h`}${thisYr?.zAvg ? `; this year is ${hhmm(thisYr.zAvg * 60)}` : ""}.`) : ""}
+      ${(() => { const r = yrRows.filter(x => x.wAvg); if (r.length < 2) return ""; const lo = r.reduce((a, b) => b.wAvg < a.wAvg ? b : a), hi = r.reduce((a, b) => b.wAvg > a.wAvg ? b : a); return li("info", "lb", `Lightest year on average: <b>${lo.year}</b> (${round(lo.wAvg, 1)} lb); heaviest: <b>${hi.year}</b> (${round(hi.wAvg, 1)} lb). Your ${T.weightGoal} lb goal is ${T.weightGoal < lo.wAvg ? "below every yearly average so far" : "within your historical range"}.`); })()}
+    </ul>`)}</div>
+    <div class="grid">${card("c12", "Weight by month", "Monthly average · dashed = goal", canvas("hi-wt", "tall"))}</div>
+    <div class="grid">
+      ${card("c6", "Steps by month", `Average per day · dashed = ${T.steps.toLocaleString()}`, canvas("hi-steps"))}
+      ${card("c6", "Sleep by month", `Average hours asleep · dashed = ${T.sleepHours} h`, canvas("hi-sleep"))}
+    </div>
+    <div class="grid">${card("c12", "Year by year", "All years · click a column to sort", sortableTable("hi-years", [
+      { key: "year", label: "Year" },
+      { key: "wAvg", label: "Avg lb", num: 1, fmt: v => v ? round(v, 1) : "–" }, { key: "wMin", label: "Min lb", num: 1, fmt: v => v ? round(v, 1) : "–" }, { key: "wMax", label: "Max lb", num: 1, fmt: v => v ? round(v, 1) : "–" },
+      { key: "stAvg", label: "Steps/day", num: 1, fmt: v => v ? round(v) : "–" }, { key: "st10k", label: "10k+ days", num: 1, fmt: (v, r) => r.stDays ? `${v} of ${r.stDays}` : "–" },
+      { key: "mi", label: "Miles", num: 1, fmt: v => v ? round(v) : "–" },
+      { key: "zAvg", label: "Sleep/night", num: 1, fmt: v => v ? hhmm(v * 60) : "–" }, { key: "z7", label: "7h+ nights", num: 1, fmt: (v, r) => r.zN ? `${v} of ${r.zN}` : "–" },
+      { key: "bestSteps", label: "Biggest day", num: 1, fmt: (v, r) => v ? `${round(v)} <span class="sub">${fmtDay(r.bestDay)}</span>` : "–" },
+    ], yrRows, "year"))}</div>`;
+
+    $("#hist-range").onclick = e => { const b = e.target.closest(".chip"); if (!b) return; histYears = +b.dataset.y; render(); };
+
+    const lbl = arr => arr.map(g => fmtMonth(g.key));
+    const o1 = baseOpts(); o1.scales.y.beginAtZero = false;
+    o1.plugins.tooltip = { ...o1.plugins.tooltip, callbacks: { label: c => c.datasetIndex === 0 ? `Avg ${round(c.parsed.y, 1)} lb (${wM[c.dataIndex].values.length} weigh-ins, ${round(wM[c.dataIndex].min, 1)}–${round(wM[c.dataIndex].max, 1)})` : `Goal ${T.weightGoal} lb` } };
+    o1.plugins.legend = { display: false };
+    chart("hi-wt", { data: { labels: lbl(wM), datasets: [line("Weight", wM.map(g => +g.avg.toFixed(1)), css("--s1"), { tension: 0.2, pointRadius: wM.length < 40 ? 3 : 0 }), goal("Goal", wM.length, T.weightGoal, css("--good"))] }, options: o1 });
+    const o2 = baseOpts({ plugins: { ...baseOpts().plugins, legend: { display: false } } });
+    chart("hi-steps", { data: { labels: lbl(sM), datasets: [goal("10k", sM.length, T.steps, css("--good")), bar("Steps/day", sM.map(g => Math.round(g.avg)), sM.map(g => g.avg >= T.steps ? css("--s6") : css("--s6") + "88"), { maxBarThickness: 14 })] }, options: o2 });
+    const o3 = baseOpts({ plugins: { ...baseOpts().plugins, legend: { display: false }, tooltip: { ...baseOpts().plugins.tooltip, callbacks: { label: c => c.datasetIndex === 1 ? `${hhmm(c.parsed.y * 60)} avg (${zM[c.dataIndex].values.length} nights)` : `${T.sleepHours} h target` } } } });
+    o3.scales.y.suggestedMax = 8;
+    chart("hi-sleep", { data: { labels: lbl(zM), datasets: [goal("7 h", zM.length, T.sleepHours, css("--good")), bar("Hours", zM.map(g => +g.avg.toFixed(2)), css("--s7"), { maxBarThickness: 14 })] }, options: o3 });
   }
 
   let raceFilter = "real";
@@ -486,13 +572,14 @@
   }
 
   // ── shell ───────────────────────────────────────────────────
-  const PAGES = { overview: renderOverview, sleep: renderSleep, nutrition: renderNutrition, training: renderTraining, body: renderBody, races: renderRaces };
+  const PAGES = { overview: renderOverview, sleep: renderSleep, nutrition: renderNutrition, training: renderTraining, body: renderBody, history: renderHistory, races: renderRaces };
 
   function render() {
     state.charts.forEach(c => c.destroy()); state.charts = [];
     state.page = PAGES[location.hash.slice(1)] ? location.hash.slice(1) : "overview";
     document.querySelectorAll("#tabs a").forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + state.page));
     document.querySelectorAll("#range button").forEach(b => b.classList.toggle("on", +b.dataset.days === state.days));
+    $("#range").style.display = state.page === "history" || state.page === "races" ? "none" : "";
     document.querySelectorAll("section.page").forEach(s => s.classList.toggle("on", s.id === "page-" + state.page));
     try { PAGES[state.page](); } catch (e) { console.error(e); $("#page-" + state.page).innerHTML = `<p class="sub">Couldn't draw this page: ${esc(e.message)}</p>`; }
   }

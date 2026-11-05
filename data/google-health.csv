@@ -1,7 +1,7 @@
-"Google Health (Fitbit) export summary, 2013 to 2026"
-"Source: Google Takeout, Google Health folder on Ravi's Mac (Documents/Fitness & Races/Google Health). Weight is mostly from the Aria scale. Newest year first."
-
-WEIGHT BY YEAR (lb)
+"Google Health (Fitbit) export summary, 2013 to 2026",,,,,,
+"Source: Google Takeout, Google Health folder on Ravi's Mac (Documents/Fitness & Races/Google Health). Weight is mostly from the Aria scale. Newest year first.",,,,,,
+,,,,,,
+WEIGHT BY YEAR (lb),,,,,,
 Year,Readings,Avg lb,Min lb,Max lb,First reading of year,Last reading of year
 2026,294,166.3,161,170.4,168.6,163.8
 2025,276,167,159.7,173.4,169.8,167.7
@@ -17,23 +17,23 @@ Year,Readings,Avg lb,Min lb,Max lb,First reading of year,Last reading of year
 2015,85,165.9,159.4,174.2,169.6,174.2
 2014,205,163.9,158.8,170.1,161.2,170.1
 2013,158,162.6,157.1,173.2,165,161.8
-
-STEPS BY YEAR (days under 500 steps left out)
-Year,Days with data,Avg steps/day,Biggest step day,Steps that day,"Days at 10,000+ steps"
-2026,89,9707,2026-10-04,30581,31
-2023,327,13961,2023-08-12,35389,255
-2022,316,10695,2022-10-09,33823,166
-2021,72,7696,2021-12-29,16556,22
-2020,307,9067,2020-04-18,24407,116
-2019,354,9953,2019-04-28,56000,140
-2018,321,9387,2018-07-29,50395,128
-2017,339,10978,2017-07-23,58414,182
-2016,307,10492,2016-10-02,34600,127
-2015,365,12610,2015-07-26,62010,224
-2014,365,14486,2014-04-21,66995,278
-2013,119,14865,2013-12-28,39615,99
-
-"SLEEP BY YEAR (main sleeps of 3h+, one per night)"
+,,,,,,
+STEPS BY YEAR (days under 500 steps left out),,,,,,
+Year,Days with data,Avg steps/day,Biggest step day,Steps that day,"Days at 10,000+ steps",
+2026,89,9707,2026-10-04,30581,31,
+2023,327,13961,2023-08-12,35389,255,
+2022,316,10695,2022-10-09,33823,166,
+2021,72,7696,2021-12-29,16556,22,
+2020,307,9067,2020-04-18,24407,116,
+2019,354,9953,2019-04-28,56000,140,
+2018,321,9387,2018-07-29,50395,128,
+2017,339,10978,2017-07-23,58414,182,
+2016,307,10492,2016-10-02,34600,127,
+2015,365,12610,2015-07-26,62010,224,
+2014,365,14486,2014-04-21,66995,278,
+2013,119,14865,2013-12-28,39615,99,
+,,,,,,
+"SLEEP BY YEAR (main sleeps of 3h+, one per night)",,,,,,
 Year,Nights logged,Avg time asleep (hrs),Sleep efficiency %,Avg bedtime (PT),Nights 7h+,Longest sleep (hrs)
 2026,91,5.8,90.9,00:12,12,9.7
 2023,287,4.9,88.9,00:57,12,8.7
@@ -47,10 +47,10 @@ Year,Nights logged,Avg time asleep (hrs),Sleep efficiency %,Avg bedtime (PT),Nig
 2015,276,5.1,92,01:01,28,10.3
 2014,278,5.6,88.2,00:53,38,9.5
 2013,106,5.9,90.6,01:04,16,14.2
-
-Notes
-"Weight: readings are every weigh-in, so a year with more readings is a better average. 2026 last reading is Oct 30, 2026 (163.8 lb)."
-"Steps: the export has no step data for 2024 and 2025. 2021 is thin (72 days). 2026 covers only Aug 2 to Oct 31 and uses Garmin steps only, because Apple Health, the phone and Garmin all record the same steps and would triple count."
-"Sleep: the export has no sleep for 2024 and 2025 (2026 is only about 91 nights). Older sleep and steps times were stored as local time. Fitbit counts time asleep, not time in bed, so averages run low."
-Possible half marathon days from this data were added to the racelist tab as possible races (unverified).
-Sleep for 2019 to 2023 also has sleep scores and stages in the export if you want them added later.
+,,,,,,
+Notes,,,,,,
+"Weight: readings are every weigh-in, so a year with more readings is a better average. 2026 last reading is Oct 30, 2026 (163.8 lb).",,,,,,
+"Steps: the export has no step data for 2024 and 2025. 2021 is thin (72 days). 2026 covers only Aug 2 to Oct 31 and uses Garmin steps only, because Apple Health, the phone and Garmin all record the same steps and would triple count.",,,,,,
+"Sleep: the export has no sleep for 2024 and 2025 (2026 is only about 91 nights). Older sleep and steps times were stored as local time. Fitbit counts time asleep, not time in bed, so averages run low.",,,,,,
+Possible half marathon days from this data were added to the racelist tab as possible races (unverified).,,,,,,
+Sleep for 2019 to 2023 also has sleep scores and stages in the export if you want them added later.,,,,,,

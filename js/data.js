@@ -152,18 +152,21 @@
     return { days, items };
   }
 
+  function slotForHour(hr) {
+    return hr < 10.5 ? "breakfast" : hr < 12 ? "morning" : hr < 15 ? "lunch" : hr < 17 ? "snacks" : hr < 19 ? "evening" : hr < 21.5 ? "dinner" : "night";
+  }
   function normMeal(m) {
     const s = String(m).toLowerCase().trim();
     const f = parseFloat(s);
-    if (!isNaN(f) && f < 1) { // spreadsheet time fraction
-      const hr = f * 24;
-      return hr < 11 ? "breakfast" : hr < 15 ? "lunch" : hr < 18 ? "afternoon" : hr < 21 ? "dinner" : "night";
-    }
+    if (/^[\d.]+$/.test(s) && f < 1) return slotForHour(f * 24); // spreadsheet time fraction
+    const clock = s.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/);
+    if (clock) { let h = +clock[1] % 12 + (clock[3] === "pm" ? 12 : 0); return slotForHour(h + (+clock[2] || 0) / 60); }
     if (/late|night/.test(s)) return "night";
-    if (/break|pre-|morning|~11|~12/.test(s)) return /break|pre-/.test(s) ? "breakfast" : "morning";
+    if (/break|pre-/.test(s)) return "breakfast";
+    if (/morning/.test(s)) return "morning";
     if (/lunch|meal/.test(s)) return "lunch";
-    if (/after|snack|ride|race|picnic|drink|through|evening/.test(s)) return /evening/.test(s) ? "evening" : "snacks";
     if (/dinner/.test(s)) return "dinner";
+    if (/evening/.test(s)) return "evening";
     return "snacks";
   }
 
@@ -227,6 +230,24 @@
     return sections;
   }
 
+  // Health Historical Daily: one row per date back to 2013 (Google Health / Fitbit + Garmin)
+  function clockToRel(s) { // "12:18 AM" -> hours after 6 PM
+    const m = String(s || "").match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    if (!m) return null;
+    let h = +m[1] % 12 + (/pm/i.test(m[3]) ? 12 : 0) + +m[2] / 60 - 18;
+    return h < 0 ? h + 24 : h;
+  }
+  function parseHealthDaily(rows) {
+    const h = findHeader(rows, "Date");
+    const out = [];
+    for (const r of rows.slice(h + 1)) {
+      const d = isIsoDate(r[0]) ? r[0] : (longDate(r[0]) ? iso(longDate(r[0])) : null);
+      if (!d) continue;
+      out.push({ date: d, weight: num(r[2]), steps: num(r[3]), mi: num(r[4]), bed: r[5], wake: r[6], bedRel: clockToRel(r[5]), hours: num(r[7]), eff: num(r[8]) });
+    }
+    return out.sort((a, b) => a.date.localeCompare(b.date));
+  }
+
   function parseSummary(rows) {
     const kv = {};
     for (const r of rows) if (r[0] && r[1]) kv[r[0]] = r[1];
@@ -240,12 +261,23 @@
       const res = await Promise.all(keys.map(loadTab));
       const raw = Object.fromEntries(keys.map((k, i) => [k, res[i]]));
       const food = parseFood(raw.foodlog.rows);
-      const weights = parseWeights(raw.dailystats.rows);
+      const recentWeights = parseWeights(raw.dailystats.rows);
+      const sleep = parseSleep(raw.sleep.rows);
+      const daily = parseHealthDaily(raw.healthDaily.rows);
+      // Weight: historical daily values, with DailyStats winning for any date it has
+      const wMap = new Map(daily.filter(x => x.weight).map(x => [x.date, x.weight]));
+      for (const w of recentWeights) wMap.set(w.date, w.weight);
+      const weights = [...wMap].map(([date, weight]) => ({ date, weight })).sort((a, b) => a.date.localeCompare(b.date));
+      // Sleep hours: historical, with the Garmin Sleep tab winning where it has the night
+      const sMap = new Map(daily.filter(x => x.hours).map(x => [x.date, { date: x.date, hours: x.hours, bedRel: x.bedRel, eff: x.eff }]));
+      for (const s of sleep) if (s.sleepMin) sMap.set(s.date, { date: s.date, hours: s.sleepMin / 60, bedRel: s.bedRel, score: s.score });
+      const sleepHistory = [...sMap.values()].sort((a, b) => a.date.localeCompare(b.date));
+      const steps = daily.filter(x => x.steps).map(x => ({ date: x.date, steps: x.steps, mi: x.mi }));
       const sources = Object.fromEntries(keys.map(k => [k, raw[k].source]));
       return {
         sources,
         summary: parseSummary(raw.summary.rows),
-        sleep: parseSleep(raw.sleep.rows),
+        sleep, sleepHistory, steps,
         workouts: parseWorkouts(raw.workouts.rows),
         nutrition: Object.values(food.days).sort((a, b) => a.date.localeCompare(b.date)),
         foodItems: food.items,

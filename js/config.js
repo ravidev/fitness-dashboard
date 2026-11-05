@@ -24,6 +24,7 @@ window.FD_CONFIG = {
     naps:         { name: "Naps",             gid: null, file: "data/naps.csv" },
     racelist:     { name: "racelist",         gid: null, file: "data/racelist.csv" },
     googleHealth: { name: "Google Health",    gid: null, file: "data/google-health.csv" },
+    healthDaily:  { name: "Health Historical Daily", gid: null, file: "data/health-daily.csv" },
   },
 
   // Targets used for goal lines and "days on target" counts
@@ -34,6 +35,7 @@ window.FD_CONFIG = {
     carbs: 248,
     fat: 60,
     sleepHours: 7,
+    steps: 10000,
     weightGoal: 160,     // lb, by Jul 2027
     lateNightHour: 21,   // food logged as "night"/"late night" counts as late-night eating
   },
