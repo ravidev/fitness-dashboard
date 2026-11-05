@@ -516,7 +516,7 @@
     <div class="filters" id="hist-range">${[[1, "1 year"], [3, "3 years"], [5, "5 years"], [0, "All since 2013"]].map(([y, l]) => `<button class="chip ${y === histYears ? "on" : ""}" data-y="${y}">${l}</button>`).join("")}</div>
     <p class="sub">${span} · Google Health (Fitbit/Aria) history merged with your Garmin and DailyStats data; where both have a day, DailyStats and the Sleep tab win.</p>
     <div class="grid">
-      ${tile("Weigh-ins", W.length.toLocaleString(), "", W.length ? `avg ${round(avg(W.map(x => x.weight)), 1)} lb · ${round(Math.min(...W.map(x => x.weight)), 1)}–${round(Math.max(...W.map(x => x.weight)), 1)}` : "")}
+      ${tile("Avg weight", W.length ? round(avg(W.map(x => x.weight)), 1) : "–", "lb", W.length ? `${W.length.toLocaleString()} weigh-ins · range ${round(Math.min(...W.map(x => x.weight)), 1)}–${round(Math.max(...W.map(x => x.weight)), 1)} lb` : "")}
       ${tile("Avg steps", round(avg(S.map(x => x.steps))), "/day", `${S.filter(x => x.steps >= T.steps).length.toLocaleString()} of ${S.length.toLocaleString()} days ≥ ${T.steps.toLocaleString()}`)}
       ${tile("Avg sleep", hhmm(avg(Z.map(x => x.hours)) * 60), "", `${Z.filter(x => x.hours >= T.sleepHours).length.toLocaleString()} of ${Z.length.toLocaleString()} nights ≥ ${T.sleepHours} h`)}
       ${tile("Distance walked/run", round(sum(S.map(x => x.mi))), "mi", "from step tracking")}
