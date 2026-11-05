@@ -96,7 +96,7 @@
   let cmpLabel = "prior 7 days";
   const card = (cls, title, sub, body) => `<div class="card ${cls}"><h3>${title}</h3>${sub ? `<p class="sub">${sub}</p>` : ""}${body}</div>`;
   const canvas = (id, size = "") => `<div class="chart ${size}"><canvas id="${id}"></canvas></div>`;
-  const rangeLabel = () => state.days ? `last ${state.days} days` : "all data";
+  const rangeLabel = () => state.days === 365 ? "last 12 months" : state.days ? `last ${state.days} days` : "all data";
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
   function sortableTable(id, cols, rows, sortKey) {
@@ -119,8 +119,8 @@
   // ── pages ───────────────────────────────────────────────────
   function renderOverview() {
     const d = state.data, end = lastDate();
-    // Period follows the range buttons; "All" spans the full Garmin/food-log era with no comparison
-    const firstDay = [d.sleep[0]?.date, d.nutrition[0]?.date, d.workouts[0]?.date].filter(Boolean).sort()[0] || end;
+    // Period follows the range buttons; "All" reaches back to the oldest record in any tab (2013)
+    const firstDay = [d.sleepHistory[0]?.date, d.weights[0]?.date, d.steps[0]?.date, d.nutrition[0]?.date, d.workouts[0]?.date].filter(Boolean).sort()[0] || end;
     const N = state.days || daysBetween(parse(firstDay), parse(end)) + 1;
     const prevEnd = iso(addDays(parse(end), -N));
     const cmp = !!state.days;
@@ -131,10 +131,14 @@
     // daily logs: the earlier period must have at least 70% of its days filled in
     const P = (list) => { if (!cmp) return []; const w = window_(list, prevEnd, N); return w.length >= 0.7 * N ? w : []; };
     const s7 = window_(d.sleep, end, N), s7p = P(d.sleep);
+    // sleep duration & 7h nights use the merged history (Garmin Sleep tab + Health Historical Daily)
+    const h7 = window_(d.sleepHistory, end, N), h7p = P(d.sleepHistory);
+    // note when a tile's log starts after the period begins
+    const since = list => { const w = window_(list, end, N); const f = w[0]?.date; return f && f > iso(addDays(parse(startOf), 7)) ? `since ${fmtDay(f)}${f.slice(0, 4) !== end.slice(0, 4) ? ", " + f.slice(0, 4) : ""}` : ""; };
     const n7 = window_(d.nutrition, end, N).filter(x => x.kcal > 1000), n7p = P(d.nutrition).filter(x => x.kcal > 1000);
     const w7 = window_(d.workouts, end, N), w7p = P(d.workouts);
     const orNull = v => (v == null || isNaN(v)) ? null : v;
-    const sleepAvg = avg(s7.map(x => x.sleepMin)), sleepPrev = orNull(avg(s7p.map(x => x.sleepMin)));
+    const sleepAvg = avg(h7.map(x => x.hours * 60)), sleepPrev = orNull(avg(h7p.map(x => x.hours * 60)));
     const scoreAvg = avg(s7.map(x => x.score)), scorePrev = orNull(avg(s7p.map(x => x.score)));
     const prot = avg(n7.map(x => x.protein)), protPrev = orNull(avg(n7p.map(x => x.protein)));
     const kcal = avg(n7.map(x => x.kcal)), kcalPrev = orNull(avg(n7p.map(x => x.kcal)));
@@ -145,25 +149,25 @@
     const protDays = n7.filter(x => x.protein >= T.protein).length;
     const wt = d.weights.at(-1);
     const wStart = d.weights.find(x => x.date >= iso(addDays(parse(end), -(N - 1))));
-    const nights7 = s7.filter(x => x.sleepMin >= T.sleepHours * 60).length;
+    const nights7 = h7.filter(x => x.hours >= T.sleepHours).length;
     const st7 = window_(d.steps, end, N), stepAvg = avg(st7.map(x => x.steps)), stepPrev = orNull(avg(P(d.steps).map(x => x.steps)));
     const burnWk = sum(w7.map(x => x.kcal)) / weeks;
-    const title = N === 7 ? "This week" : state.days ? `Last ${N} days` : "All data";
-    const periodWord = state.days ? `over ${N} days` : `since ${fmtDay(firstDay)}`;
+    const title = N === 7 ? "This week" : N === 365 ? "Last 12 months" : state.days ? `Last ${N} days` : "All data";
+    const periodWord = state.days === 365 ? "over 12 months" : state.days ? `over ${N} days` : `since ${parse(firstDay).toLocaleDateString(undefined, { month: "short", year: "numeric" })}`;
     const joinD = (...parts) => parts.filter(Boolean).join(" · ");
 
     const upcoming = d.races.filter(r => r.d >= today() && r.registered).slice(0, 4);
 
     let html = `<h2>${title} <span class="sub" style="font-weight:400">· ${state.days ? `${N} days ending ${fmtLong(end)}${cmp ? `; arrows compare with the ${N} days before when both periods have data` : ""}` : `${fmtLong(firstDay)} – ${fmtLong(end)}`}</span></h2>
     <div class="grid">
-      ${tile("Avg sleep", hhmm(sleepAvg), "", deltaText(sleepAvg && sleepAvg / 60, sleepPrev && sleepPrev / 60, " h", true, 1), sleepAvg / (T.sleepHours * 60) * 100)}
-      ${tile("Avg sleep score", round(scoreAvg), "/100", deltaText(scoreAvg, scorePrev, " pts", true))}
-      ${tile("Avg protein", round(prot), "g", joinD(`${protDays} of ${n7.length} days ≥ ${T.protein} g`, deltaText(prot, protPrev, " g", true)), prot / T.protein * 100)}
-      ${tile("Avg intake", round(kcal), "kcal", deltaText(kcal, kcalPrev, " kcal", null))}
-      ${tile("Training", round(hrs, 1), "h/week", joinD(`${w7.length} sessions`, deltaText(hrs, hrsPrev, " h", true, 1)))}
+      ${tile("Avg sleep", hhmm(sleepAvg), "", joinD(`${h7.length.toLocaleString()} nights`, since(d.sleepHistory), deltaText(sleepAvg && sleepAvg / 60, sleepPrev && sleepPrev / 60, " h", true, 1)), sleepAvg / (T.sleepHours * 60) * 100)}
+      ${tile("Avg sleep score", round(scoreAvg), "/100", joinD(since(d.sleep) && `Garmin ${since(d.sleep)}`, deltaText(scoreAvg, scorePrev, " pts", true)))}
+      ${tile("Avg protein", round(prot), "g", joinD(`${protDays} of ${n7.length} days ≥ ${T.protein} g`, since(d.nutrition) && `food log ${since(d.nutrition)}`, deltaText(prot, protPrev, " g", true)), prot / T.protein * 100)}
+      ${tile("Avg intake", round(kcal), "kcal", joinD(since(d.nutrition) && `food log ${since(d.nutrition)}`, deltaText(kcal, kcalPrev, " kcal", null)))}
+      ${tile("Training", round(hrs, 1), "h/week", joinD(`${w7.length} sessions`, since(d.workouts) && `log ${since(d.workouts)}`, deltaText(hrs, hrsPrev, " h", true, 1)))}
       ${tile("Weight", wt ? round(wt.weight, 1) : "–", "lb", wt && wStart && wStart.date !== wt.date ? `<span class="${wt.weight <= wStart.weight ? "down-good" : "up-bad"}">${wt.weight <= wStart.weight ? "▼" : "▲"} ${round(Math.abs(wt.weight - wStart.weight), 1)} lb</span> ${periodWord} · goal ${T.weightGoal}` : `goal ${T.weightGoal}`)}
-      ${tile("Nights ≥ 7 h", nights7, ` of ${s7.length}`, `HRV avg ${round(avg(s7.map(x => x.hrv)))} ms · ${round(burnWk)} kcal exercise/week`)}
-      ${tile("Avg steps", round(stepAvg), "/day", joinD(`${st7.filter(x => x.steps >= T.steps).length} of ${st7.length} days ≥ ${T.steps.toLocaleString()}`, deltaText(stepAvg, stepPrev, "", true)), stepAvg / T.steps * 100)}
+      ${tile("Nights ≥ 7 h", nights7.toLocaleString(), ` of ${h7.length.toLocaleString()}`, joinD(`${round(nights7 / Math.max(1, h7.length) * 100)}% of nights`, `HRV avg ${round(avg(s7.map(x => x.hrv)))} ms`))}
+      ${tile("Avg steps", round(stepAvg), "/day", joinD(`${st7.filter(x => x.steps >= T.steps).length.toLocaleString()} of ${st7.length.toLocaleString()} days ≥ ${T.steps.toLocaleString()}`, since(d.steps), deltaText(stepAvg, stepPrev, "", true)), stepAvg / T.steps * 100)}
     </div>
     <div class="grid">
       ${card("c7", "What the data says", `Patterns across ${rangeLabel()}`, `<ul class="insights">${insights().join("")}</ul>`)}
