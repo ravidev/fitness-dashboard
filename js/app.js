@@ -88,11 +88,12 @@
   function deltaText(cur, prev, unit, higherIsGood, digits = 0) {
     if (cur == null || prev == null) return "";
     const d = cur - prev;
-    if (Math.abs(d) < Math.pow(10, -digits) / 2) return "same as prior week";
+    if (Math.abs(d) < Math.pow(10, -digits) / 2) return `same as ${cmpLabel}`;
     const good = higherIsGood == null ? null : (d > 0) === higherIsGood;
     const cls = good == null ? "" : good ? "up-good" : "up-bad";
-    return `<span class="${cls}">${d > 0 ? "▲" : "▼"} ${round(Math.abs(d), digits)}${unit}</span> vs prior 7 days`;
+    return `<span class="${cls}">${d > 0 ? "▲" : "▼"} ${round(Math.abs(d), digits)}${unit}</span> vs ${cmpLabel}`;
   }
+  let cmpLabel = "prior 7 days";
   const card = (cls, title, sub, body) => `<div class="card ${cls}"><h3>${title}</h3>${sub ? `<p class="sub">${sub}</p>` : ""}${body}</div>`;
   const canvas = (id, size = "") => `<div class="chart ${size}"><canvas id="${id}"></canvas></div>`;
   const rangeLabel = () => state.days ? `last ${state.days} days` : "all data";
@@ -117,32 +118,52 @@
 
   // ── pages ───────────────────────────────────────────────────
   function renderOverview() {
-    const d = state.data, end = lastDate(), prevEnd = iso(addDays(parse(end), -7));
-    const s7 = window_(d.sleep, end, 7), s7p = window_(d.sleep, prevEnd, 7);
-    const n7 = window_(d.nutrition, end, 7).filter(x => x.kcal > 1000), n7p = window_(d.nutrition, prevEnd, 7).filter(x => x.kcal > 1000);
-    const w7 = window_(d.workouts, end, 7), w7p = window_(d.workouts, prevEnd, 7);
-    const sleepAvg = avg(s7.map(x => x.sleepMin)), sleepPrev = avg(s7p.map(x => x.sleepMin));
-    const scoreAvg = avg(s7.map(x => x.score)), scorePrev = avg(s7p.map(x => x.score));
-    const prot = avg(n7.map(x => x.protein)), protPrev = avg(n7p.map(x => x.protein));
-    const kcal = avg(n7.map(x => x.kcal)), kcalPrev = avg(n7p.map(x => x.kcal));
-    const hrs = sum(w7.map(x => x.min)) / 60, hrsPrev = sum(w7p.map(x => x.min)) / 60;
+    const d = state.data, end = lastDate();
+    // Period follows the range buttons; "All" spans the full Garmin/food-log era with no comparison
+    const firstDay = [d.sleep[0]?.date, d.nutrition[0]?.date, d.workouts[0]?.date].filter(Boolean).sort()[0] || end;
+    const N = state.days || daysBetween(parse(firstDay), parse(end)) + 1;
+    const prevEnd = iso(addDays(parse(end), -N));
+    const cmp = !!state.days;
+    cmpLabel = `prior ${N} days`;
+    const startOf = iso(addDays(parse(end), -(N - 1))), prevStart = iso(addDays(parse(end), -(2 * N - 1)));
+    // compare only when that log fully covers the earlier period, otherwise the change is misleading
+    const covers = list => cmp && list.length && list[0].date <= prevStart;
+    // daily logs: the earlier period must have at least 70% of its days filled in
+    const P = (list) => { if (!cmp) return []; const w = window_(list, prevEnd, N); return w.length >= 0.7 * N ? w : []; };
+    const s7 = window_(d.sleep, end, N), s7p = P(d.sleep);
+    const n7 = window_(d.nutrition, end, N).filter(x => x.kcal > 1000), n7p = P(d.nutrition).filter(x => x.kcal > 1000);
+    const w7 = window_(d.workouts, end, N), w7p = P(d.workouts);
+    const orNull = v => (v == null || isNaN(v)) ? null : v;
+    const sleepAvg = avg(s7.map(x => x.sleepMin)), sleepPrev = orNull(avg(s7p.map(x => x.sleepMin)));
+    const scoreAvg = avg(s7.map(x => x.score)), scorePrev = orNull(avg(s7p.map(x => x.score)));
+    const prot = avg(n7.map(x => x.protein)), protPrev = orNull(avg(n7p.map(x => x.protein)));
+    const kcal = avg(n7.map(x => x.kcal)), kcalPrev = orNull(avg(n7p.map(x => x.kcal)));
+    // per-week rates use only the days the workout log actually covers
+    const wFirst = d.workouts[0]?.date || end;
+    const weeks = (daysBetween(parse(wFirst > startOf ? wFirst : startOf), parse(end)) + 1) / 7;
+    const hrs = sum(w7.map(x => x.min)) / 60 / weeks, hrsPrev = covers(d.workouts) ? sum(w7p.map(x => x.min)) / 60 / (N / 7) : null;
     const protDays = n7.filter(x => x.protein >= T.protein).length;
-    const wt = d.weights.at(-1), wt30 = d.weights.find(x => x.date >= iso(addDays(parse(end), -29)));
+    const wt = d.weights.at(-1);
+    const wStart = d.weights.find(x => x.date >= iso(addDays(parse(end), -(N - 1))));
     const nights7 = s7.filter(x => x.sleepMin >= T.sleepHours * 60).length;
-    const st7 = window_(d.steps, end, 7), stepAvg = avg(st7.map(x => x.steps)), stepPrev = avg(window_(d.steps, prevEnd, 7).map(x => x.steps));
+    const st7 = window_(d.steps, end, N), stepAvg = avg(st7.map(x => x.steps)), stepPrev = orNull(avg(P(d.steps).map(x => x.steps)));
+    const burnWk = sum(w7.map(x => x.kcal)) / weeks;
+    const title = N === 7 ? "This week" : state.days ? `Last ${N} days` : "All data";
+    const periodWord = state.days ? `over ${N} days` : `since ${fmtDay(firstDay)}`;
+    const joinD = (...parts) => parts.filter(Boolean).join(" · ");
 
     const upcoming = d.races.filter(r => r.d >= today() && r.registered).slice(0, 4);
 
-    let html = `<h2>This week <span class="sub" style="font-weight:400">· 7 days ending ${fmtLong(end)}</span></h2>
+    let html = `<h2>${title} <span class="sub" style="font-weight:400">· ${state.days ? `${N} days ending ${fmtLong(end)}${cmp ? `; arrows compare with the ${N} days before when both periods have data` : ""}` : `${fmtLong(firstDay)} – ${fmtLong(end)}`}</span></h2>
     <div class="grid">
       ${tile("Avg sleep", hhmm(sleepAvg), "", deltaText(sleepAvg && sleepAvg / 60, sleepPrev && sleepPrev / 60, " h", true, 1), sleepAvg / (T.sleepHours * 60) * 100)}
       ${tile("Avg sleep score", round(scoreAvg), "/100", deltaText(scoreAvg, scorePrev, " pts", true))}
-      ${tile("Avg protein", round(prot), "g", `${protDays} of ${n7.length} days ≥ ${T.protein} g · ${deltaText(prot, protPrev, " g", true)}`, prot / T.protein * 100)}
+      ${tile("Avg protein", round(prot), "g", joinD(`${protDays} of ${n7.length} days ≥ ${T.protein} g`, deltaText(prot, protPrev, " g", true)), prot / T.protein * 100)}
       ${tile("Avg intake", round(kcal), "kcal", deltaText(kcal, kcalPrev, " kcal", null))}
-      ${tile("Training", round(hrs, 1), "h", `${w7.length} sessions · ${deltaText(hrs, hrsPrev, " h", true, 1)}`)}
-      ${tile("Weight", wt ? round(wt.weight, 1) : "–", "lb", wt && wt30 ? `<span class="${wt.weight <= wt30.weight ? "down-good" : "up-bad"}">${wt.weight <= wt30.weight ? "▼" : "▲"} ${round(Math.abs(wt.weight - wt30.weight), 1)} lb</span> over 30 days · goal ${T.weightGoal}` : "")}
-      ${tile("Nights ≥ 7 h", nights7, ` of ${s7.length}`, `HRV avg ${round(avg(s7.map(x => x.hrv)))} ms · ${round(sum(w7.map(x => x.kcal)))} kcal exercise`)}
-      ${tile("Avg steps", round(stepAvg), "/day", `${st7.filter(x => x.steps >= T.steps).length} of ${st7.length} days ≥ ${T.steps.toLocaleString()} · ${deltaText(stepAvg, stepPrev, "", true)}`, stepAvg / T.steps * 100)}
+      ${tile("Training", round(hrs, 1), "h/week", joinD(`${w7.length} sessions`, deltaText(hrs, hrsPrev, " h", true, 1)))}
+      ${tile("Weight", wt ? round(wt.weight, 1) : "–", "lb", wt && wStart && wStart.date !== wt.date ? `<span class="${wt.weight <= wStart.weight ? "down-good" : "up-bad"}">${wt.weight <= wStart.weight ? "▼" : "▲"} ${round(Math.abs(wt.weight - wStart.weight), 1)} lb</span> ${periodWord} · goal ${T.weightGoal}` : `goal ${T.weightGoal}`)}
+      ${tile("Nights ≥ 7 h", nights7, ` of ${s7.length}`, `HRV avg ${round(avg(s7.map(x => x.hrv)))} ms · ${round(burnWk)} kcal exercise/week`)}
+      ${tile("Avg steps", round(stepAvg), "/day", joinD(`${st7.filter(x => x.steps >= T.steps).length} of ${st7.length} days ≥ ${T.steps.toLocaleString()}`, deltaText(stepAvg, stepPrev, "", true)), stepAvg / T.steps * 100)}
     </div>
     <div class="grid">
       ${card("c7", "What the data says", `Patterns across ${rangeLabel()}`, `<ul class="insights">${insights().join("")}</ul>`)}
