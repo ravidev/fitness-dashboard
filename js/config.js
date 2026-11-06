@@ -14,7 +14,7 @@ window.FD_CONFIG = {
   publishedId: null,
 
   // GoatCounter site code (the "xyz" in https://xyz.goatcounter.com). null = analytics off.
-  goatcounter: null,
+  goatcounter: "ravifitness",
 
   // Your sheet (used for the "Open sheet" link only)
   sheetUrl: "https://docs.google.com/spreadsheets/d/1MLtoN2pkTAJv7D6osOBqUXlF9D48U0sztjvwiLI9e3Q/edit",
