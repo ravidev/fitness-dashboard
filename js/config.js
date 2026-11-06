@@ -6,6 +6,8 @@
 // and paste the link's ID (the part after /d/e/ and before /pub) below.
 // Then fill in each tab's gid (click the tab; the URL ends in #gid=NNNN).
 // Any tab left null is read from the snapshot in /data instead.
+// Tabs marked live:false are always read from the cleaned snapshot, because the
+// published sheet still has registration, confirmation and payment details.
 // ─────────────────────────────────────────────────────────────
 window.FD_CONFIG = {
   // The ID from the "Publish to web" link: https://docs.google.com/spreadsheets/d/e/<PUBLISHED_ID>/pub?output=csv
@@ -16,13 +18,13 @@ window.FD_CONFIG = {
 
   // gid of each tab. Snapshot file in /data is used when live fetch fails or gid is null.
   tabs: {
-    summary:      { name: "Summary",          gid: null, file: "data/summary.csv" },
+    summary:      { name: "Summary",          gid: null, file: "data/summary.csv", live: false },
     workouts:     { name: "Workouts",         gid: null, file: "data/workouts.csv" },
     dailystats:   { name: "DailyStats",       gid: null, file: "data/dailystats.csv" },
     foodlog:      { name: "Food Log (items)", gid: null, file: "data/foodlog.csv" },
     sleep:        { name: "Sleep",            gid: null, file: "data/sleep.csv" },
     naps:         { name: "Naps",             gid: null, file: "data/naps.csv" },
-    racelist:     { name: "racelist",         gid: null, file: "data/racelist.csv" },
+    racelist:     { name: "racelist",         gid: null, file: "data/racelist.csv", live: false },
     googleHealth: { name: "Google Health",    gid: null, file: "data/google-health.csv" },
     healthDaily:  { name: "Health Historical Daily", gid: null, file: "data/health-daily.csv" },
   },

@@ -1,4 +1,6 @@
-import openpyxl, csv, re, datetime, sys
+import openpyxl, csv, re, datetime, sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sanitize
 wb = openpyxl.load_workbook(sys.argv[1], data_only=True)
 OUT = sys.argv[2]
 TABS = {'Summary':'summary','Workouts':'workouts','DailyStats':'dailystats','Food Log (items)':'foodlog','Sleep':'sleep',
@@ -35,3 +37,8 @@ for name, slug in TABS.items():
     with open(f'{OUT}/{slug}.csv', 'w', newline='', encoding='utf-8') as fh:
         csv.writer(fh, lineterminator='\n').writerows([r[:w] for r in rows])
     print(f'{slug}: {len(rows)} rows')
+
+sanitize.main = None
+for f in os.listdir(OUT):
+    if f.endswith('.csv'): sanitize.clean(os.path.join(OUT, f))
+print('sanitized', OUT)

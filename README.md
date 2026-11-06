@@ -50,6 +50,9 @@ python3 -m http.server 8000   # then open http://localhost:8000
 ```
 (Opening `index.html` directly won't load the CSVs; browsers block that.)
 
+## Privacy
+The site's copies of the data are cleaned by `scripts/sanitize.py` (and the same rules in `scripts/snapshot.mjs`): registration/confirmation numbers, costs and race notes are removed, Summary rows with payment or reference details are dropped, and sold-out races are left out. *racelist* and *Summary* are never read live from the published sheet. The Google Sheet keeps everything.
+
 ## Merge rules
 - **Weight:** *Health Historical Daily* fills the history; *DailyStats* wins for any date it has.
 - **Sleep:** the Garmin *Sleep* tab wins for any night it has; older nights come from *Health Historical Daily*.

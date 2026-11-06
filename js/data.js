@@ -5,7 +5,7 @@
 
   // ── fetching ────────────────────────────────────────────────
   function liveUrl(tab) {
-    if (!CFG.publishedId || tab.gid == null) return null;
+    if (!CFG.publishedId || tab.gid == null || tab.live === false) return null;
     return `https://docs.google.com/spreadsheets/d/e/${CFG.publishedId}/pub?gid=${tab.gid}&single=true&output=csv&_=${Date.now()}`;
   }
 
