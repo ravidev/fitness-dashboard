@@ -5,9 +5,9 @@ A static website that turns the **Ravi Fitness – Sleep, Workouts & Food** Goog
 | Page | What it shows |
 |---|---|
 | **Overview** | This week vs last week (sleep, score, protein, intake, training, weight), auto-generated insights, race countdowns |
-| **Sleep** | Time asleep vs 7 h, stages, score labels, HRV trend, bedtime vs score, nightly table |
-| **Nutrition** | Calories vs FITTR target, protein vs 140 g, macro split, calories by time of day, weekly averages, top foods |
 | **Training** | Weekly hours by sport, sport mix, activity calendar, totals, filterable workout log |
+| **Nutrition** | Calories vs FITTR target, protein vs 140 g, macro split, calories by time of day, weekly averages, top foods |
+| **Sleep** | Time asleep vs 7 h, stages, score labels, HRV trend, bedtime vs score, nightly table |
 | **Body** | Weight trend vs goal (DailyStats + historical weigh-ins), profile/DEXA, weight by year |
 | **BP** | Blood pressure from *Health Historical Daily* (2021–): average and AHA category, trend vs 130/80, days per category, year by year, weight vs BP |
 | **History** | Every day since 2013 from *Health Historical Daily*: monthly weight, steps and sleep, long-term patterns, year-by-year table |

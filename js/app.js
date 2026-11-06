@@ -175,25 +175,36 @@
 
     let html = `<h2>${title} <span class="sub" style="font-weight:400">· ${state.days ? `${N} days ending ${fmtLong(end)}${cmp ? `; arrows compare with the ${N} days before when both periods have data` : ""}` : `${fmtLong(firstDay)} – ${fmtLong(end)}`}</span></h2>
     <div class="grid">
-      ${tile("Avg sleep", hhmm(sleepAvg), "", joinD(`${nights7.toLocaleString()} of ${h7.length.toLocaleString()} nights ≥ ${T.sleepHours} h`, since(d.sleepHistory), deltaText(sleepAvg && sleepAvg / 60, sleepPrev && sleepPrev / 60, " h", true, 1)), sleepAvg / (T.sleepHours * 60) * 100)}
-      ${tile("Avg sleep score", round(scoreAvg), "/100", joinD(since(d.sleep) && `Garmin ${since(d.sleep)}`, deltaText(scoreAvg, scorePrev, " pts", true)))}
+      ${tile("Training", round(hrs, 1), "h/week", joinD(`${w7.length} sessions`, since(d.workouts) && `log ${since(d.workouts)}`, deltaText(hrs, hrsPrev, " h", true, 1)))}
+      ${tile("Avg steps", round(stepAvg), "/day", joinD(`${st7.filter(x => x.steps >= T.steps).length.toLocaleString()} of ${st7.length.toLocaleString()} days ≥ ${T.steps.toLocaleString()}`, since(d.steps), deltaText(stepAvg, stepPrev, "", true)), stepAvg / T.steps * 100)}
       ${tile("Avg protein", round(prot), "g", joinD(`${protDays} of ${n7.length} days ≥ ${T.protein} g`, since(d.nutrition) && `food log ${since(d.nutrition)}`, deltaText(prot, protPrev, " g", true)), prot / T.protein * 100)}
       ${tile("Avg intake", round(kcal), "kcal", joinD(since(d.nutrition) && `food log ${since(d.nutrition)}`, deltaText(kcal, kcalPrev, " kcal", null)))}
-      ${tile("Training", round(hrs, 1), "h/week", joinD(`${w7.length} sessions`, since(d.workouts) && `log ${since(d.workouts)}`, deltaText(hrs, hrsPrev, " h", true, 1)))}
+      ${tile("Avg sleep", hhmm(sleepAvg), "", joinD(`${nights7.toLocaleString()} of ${h7.length.toLocaleString()} nights ≥ ${T.sleepHours} h`, since(d.sleepHistory), deltaText(sleepAvg && sleepAvg / 60, sleepPrev && sleepPrev / 60, " h", true, 1)), sleepAvg / (T.sleepHours * 60) * 100)}
+      ${tile("Avg sleep score", round(scoreAvg), "/100", joinD(since(d.sleep) && `Garmin ${since(d.sleep)}`, deltaText(scoreAvg, scorePrev, " pts", true)))}
       ${tile("Weight", wt ? round(wt.weight, 1) : "–", "lb", wt && wStart && wStart.date !== wt.date ? `<span class="${wt.weight <= wStart.weight ? "down-good" : "up-bad"}">${wt.weight <= wStart.weight ? "▼" : "▲"} ${round(Math.abs(wt.weight - wStart.weight), 1)} lb</span> ${periodWord} · goal ${T.weightGoal}` : `goal ${T.weightGoal}`)}
       ${bpTile(bpW, bpP, since(d.bp))}
-      ${tile("Avg steps", round(stepAvg), "/day", joinD(`${st7.filter(x => x.steps >= T.steps).length.toLocaleString()} of ${st7.length.toLocaleString()} days ≥ ${T.steps.toLocaleString()}`, since(d.steps), deltaText(stepAvg, stepPrev, "", true)), stepAvg / T.steps * 100)}
     </div>
     <div class="grid">
       ${card("c7", "What the data says", `Patterns across ${rangeLabel()}`, `<ul class="insights">${insights().join("")}</ul>`)}
       ${card("c5", "Upcoming races", "Registered entries", `<div class="race-list">${upcoming.map(raceRow).join("") || "<p class='sub'>None</p>"}</div>`)}
     </div>
     <div class="grid">
-      ${card("c6", "Sleep score", rangeLabel(), canvas("ov-sleep", "short"))}
-      ${card("c6", "Protein per day", `${rangeLabel()} · dashed = ${T.protein} g goal`, canvas("ov-prot", "short"))}
+      ${card("c4", "Training per day", `${rangeLabel()} · minutes, by sport`, canvas("ov-train", "short"))}
+      ${card("c4", "Protein per day", `${rangeLabel()} · dashed = ${T.protein} g goal`, canvas("ov-prot", "short"))}
+      ${card("c4", "Sleep score", rangeLabel(), canvas("ov-sleep", "short"))}
     </div>`;
     $("#page-overview").innerHTML = html;
 
+    const wo = inRange(d.workouts);
+    const woDays = [...new Set(wo.map(w => w.date))].sort();
+    if (woDays.length) {
+      const days = []; for (let x = parse(woDays[0]); iso(x) <= lastDate(); x = addDays(x, 1)) days.push(iso(x));
+      const sp = SPORTS.filter(s => wo.some(w => w.sport === s));
+      const to = baseOpts(); to.scales.x.stacked = true; to.scales.y.stacked = true;
+      to.plugins.legend = { display: false };
+      to.plugins.tooltip = { ...to.plugins.tooltip, filter: i => i.parsed.y > 0, callbacks: { label: c => `${c.dataset.label}: ${Math.round(c.parsed.y)} min` } };
+      chart("ov-train", { type: "bar", data: { labels: days.map(fmtDay), datasets: sp.map(s => bar(s, days.map(dd => sum(wo.filter(w => w.date === dd && w.sport === s).map(w => w.min))), sportColor(s), { borderRadius: 0, borderColor: css("--surface"), borderWidth: { top: 1 } })) }, options: to });
+    }
     const sl = inRange(d.sleep);
     chart("ov-sleep", { type: "bar", data: { labels: sl.map(x => fmtDay(x.date)), datasets: [bar("Score", sl.map(x => x.score), sl.map(x => scoreColor(x.score)))] }, options: baseOpts({ plugins: { ...baseOpts().plugins, legend: { display: false } }, scales: { ...baseOpts().scales, y: { ...baseOpts().scales.y, max: 100 } } }) });
     const nu = inRange(d.nutrition);
@@ -226,35 +237,35 @@
   }
 
   function insights() {
-    const d = state.data, out = [];
+    const d = state.data, out = [], tag = { w: [], n: [], s: [] };
     const sl = inRange(d.sleep), nu = inRange(d.nutrition);
     // bedtime vs score
     const early = sl.filter(x => x.bedRel != null && x.bedRel < 6), late = sl.filter(x => x.bedRel != null && x.bedRel >= 6);
     if (early.length >= 3 && late.length >= 3) {
       const a = avg(early.map(x => x.score)), b = avg(late.map(x => x.score));
       const ma = avg(early.map(x => x.sleepMin)), mb = avg(late.map(x => x.sleepMin));
-      out.push(li(a > b ? "good" : "info", "◐", `Nights in bed <b>before midnight</b> average a score of <b>${round(a)}</b> and ${hhmm(ma)} asleep, vs <b>${round(b)}</b> and ${hhmm(mb)} after midnight (${early.length} vs ${late.length} nights).`));
+      tag.s.push(li(a > b ? "good" : "info", "◐", `Nights in bed <b>before midnight</b> average a score of <b>${round(a)}</b> and ${hhmm(ma)} asleep, vs <b>${round(b)}</b> and ${hhmm(mb)} after midnight (${early.length} vs ${late.length} nights).`));
     }
     const short = sl.filter(x => x.sleepMin < T.sleepHours * 60).length;
-    if (sl.length) out.push(li(short / sl.length > 0.5 ? "bad" : "warn", "z", `<b>${short} of ${sl.length}</b> nights were under ${T.sleepHours} h. Average ${hhmm(avg(sl.map(x => x.sleepMin)))}, ${hhmm(T.sleepHours * 60 - avg(sl.map(x => x.sleepMin)))} short of target.`));
+    if (sl.length) tag.s.push(li(short / sl.length > 0.5 ? "bad" : "warn", "z", `<b>${short} of ${sl.length}</b> nights were under ${T.sleepHours} h. Average ${hhmm(avg(sl.map(x => x.sleepMin)))}, ${hhmm(T.sleepHours * 60 - avg(sl.map(x => x.sleepMin)))} short of target.`));
     const full = nu.filter(x => x.kcal > 1000);
     if (full.length) {
       const hit = full.filter(x => x.protein >= T.protein).length;
       const pAvg = avg(full.map(x => x.protein));
-      out.push(li(hit / full.length >= 0.5 ? "good" : "warn", "P", `Protein hit ${T.protein} g on <b>${hit} of ${full.length}</b> days (avg ${round(pAvg)} g). Closing the gap is about <b>${round(Math.max(0, T.protein - pAvg))} g/day</b>, roughly one protein shake.`));
+      tag.n.push(li(hit / full.length >= 0.5 ? "good" : "warn", "P", `Protein hit ${T.protein} g on <b>${hit} of ${full.length}</b> days (avg ${round(pAvg)} g). Closing the gap is about <b>${round(Math.max(0, T.protein - pAvg))} g/day</b>, roughly one protein shake.`));
       const kAvg = avg(full.map(x => x.kcal)), bAvg = avg(full.map(x => x.burn));
-      out.push(li("info", "k", `Average intake <b>${round(kAvg)} kcal</b> vs FITTR's ${T.kcal.toLocaleString()} target; with ~${round(bAvg)} kcal of logged exercise, net is about <b>${round(kAvg - bAvg)}</b>.`));
+      tag.n.push(li("info", "k", `Average intake <b>${round(kAvg)} kcal</b> vs FITTR's ${T.kcal.toLocaleString()} target; with ~${round(bAvg)} kcal of logged exercise, net is about <b>${round(kAvg - bAvg)}</b>.`));
     }
     // late-night eating
     const items = inRange(d.foodItems);
     const night = sum(items.filter(i => i.meal === "night").map(i => i.kcal)), tot = sum(items.map(i => i.kcal));
-    if (tot) out.push(li(night / tot > 0.1 ? "warn" : "good", "☾", `Late-night eating is <b>${round(night / tot * 100)}%</b> of logged calories (${round(night)} kcal across ${new Set(items.filter(i => i.meal === "night").map(i => i.date)).size} nights).`));
+    if (tot) tag.n.push(li(night / tot > 0.1 ? "warn" : "good", "☾", `Late-night eating is <b>${round(night / tot * 100)}%</b> of logged calories (${round(night)} kcal across ${new Set(items.filter(i => i.meal === "night").map(i => i.date)).size} nights).`));
     // training load vs next night's sleep
     const burnByDay = {}; for (const w of d.workouts) burnByDay[w.date] = (burnByDay[w.date] || 0) + (w.kcal || 0);
     const pairs = sl.map(s => ({ burn: burnByDay[iso(addDays(parse(s.date), -1))] || 0, score: s.score }));
     const big = pairs.filter(p => p.burn >= 600), small = pairs.filter(p => p.burn < 600);
-    if (big.length >= 3 && small.length >= 3) out.push(li("info", "↯", `After big training days (≥600 kcal) the next night scores <b>${round(avg(big.map(p => p.score)))}</b> vs <b>${round(avg(small.map(p => p.score)))}</b> after lighter days.`));
-    return out;
+    if (big.length >= 3 && small.length >= 3) tag.w.push(li("info", "↯", `After big training days (≥600 kcal) the next night scores <b>${round(avg(big.map(p => p.score)))}</b> vs <b>${round(avg(small.map(p => p.score)))}</b> after lighter days.`));
+    return [...tag.w, ...tag.n, ...tag.s];
   }
   const li = (cls, ico, text) => `<li><span class="ico ${cls}">${ico}</span><span>${text}</span></li>`;
 
@@ -715,7 +726,7 @@
   }
 
   // ── shell ───────────────────────────────────────────────────
-  const PAGES = { overview: renderOverview, sleep: renderSleep, nutrition: renderNutrition, training: renderTraining, body: renderBody, bp: renderBP, history: renderHistory, races: renderRaces };
+  const PAGES = { overview: renderOverview, training: renderTraining, nutrition: renderNutrition, sleep: renderSleep, body: renderBody, bp: renderBP, history: renderHistory, races: renderRaces };
 
   function render() {
     state.charts.forEach(c => c.destroy()); state.charts = [];
