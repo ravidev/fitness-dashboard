@@ -486,37 +486,147 @@
   }
   const fmtMonth = k => new Date(+k.slice(0, 4), +k.slice(5, 7) - 1, 1).toLocaleDateString(undefined, { month: "short", year: "numeric" });
 
+  // Vertical year / quarter / month lines and holiday shading for category-axis charts.
+  // options.plugins.periodMarks = { dates: [iso per label], show: {year, quarter, month, holidays} }
+  const periodMarks = {
+    id: "periodMarks",
+    beforeDatasetsDraw(ch, _a, o) {
+      if (!o || !o.dates || o.dates.length < 2) return;
+      const { ctx, chartArea: A, scales: { x } } = ch, D = o.dates, S = o.show || {};
+      const px = i => x.getPixelForValue(i), mid = i => (px(i - 1) + px(i)) / 2;
+      ctx.save();
+      if (S.holidays) { // Thanksgiving week through New Year (Nov 20 – Jan 5)
+        const hol = dt => { const m = +dt.slice(5, 7), dd = +dt.slice(8, 10); return (m === 11 && dd >= 20) || m === 12 || (m === 1 && dd <= 5); };
+        ctx.fillStyle = css("--warn") + "26";
+        let st = null;
+        for (let i = 0; i <= D.length; i++) {
+          const on = i < D.length && hol(D[i]);
+          if (on && st == null) st = i;
+          if (!on && st != null) { const x0 = st ? mid(st) : A.left, x1 = i < D.length ? mid(i) : A.right; ctx.fillRect(x0, A.top, x1 - x0, A.bottom - A.top); st = null; }
+        }
+      }
+      let lastLabelX = -1e9;
+      for (let i = 1; i < D.length; i++) {
+        const a = D[i - 1], b = D[i];
+        const kind = a.slice(0, 4) !== b.slice(0, 4) ? "year" : Math.floor((+a.slice(5, 7) - 1) / 3) !== Math.floor((+b.slice(5, 7) - 1) / 3) ? "quarter" : a.slice(5, 7) !== b.slice(5, 7) ? "month" : null;
+        if (!kind || !S[kind] && !(kind === "year" && (S.quarter || S.month)) && !(kind === "quarter" && S.month)) continue;
+        // a year boundary is also a quarter and month boundary; draw the strongest one that's switched on
+        const k = S[kind] ? kind : S.quarter && kind === "year" ? "quarter" : "month";
+        const xx = mid(i);
+        ctx.beginPath(); ctx.moveTo(xx, A.top); ctx.lineTo(xx, A.bottom);
+        ctx.lineWidth = k === "year" ? 1.5 : 1;
+        ctx.strokeStyle = k === "year" ? css("--ink-2") : k === "quarter" ? css("--muted") : css("--axis");
+        ctx.setLineDash(k === "year" ? [] : k === "quarter" ? [4, 3] : [2, 3]);
+        ctx.stroke();
+        const lbl = k === "year" ? b.slice(0, 4) : k === "quarter" ? `Q${Math.floor((+b.slice(5, 7) - 1) / 3) + 1}` : parse(b).toLocaleDateString(undefined, { month: "short" });
+        ctx.font = `${k === "year" ? 600 : 400} 10.5px system-ui, sans-serif`;
+        const w = ctx.measureText(lbl).width;
+        if (xx - lastLabelX > w + 8 || k === "year") {
+          ctx.fillStyle = k === "year" ? css("--ink-2") : css("--muted");
+          ctx.fillText(lbl, xx + 3, A.top + 11);
+          lastLabelX = xx + w;
+        }
+      }
+      ctx.restore();
+    },
+  };
+
+  let bodyMarks = null;            // user's marker toggles; reset when the range changes
+  function defaultMarks() {
+    return state.days === 0 ? { year: true, quarter: true, month: false, holidays: true }
+      : state.days === 365 ? { year: true, quarter: true, month: true, holidays: true }
+      : { year: true, quarter: false, month: true, holidays: state.days >= 90 };
+  }
+
   function renderBody() {
-    const d = state.data, wtAll = inRange(d.weights), s = d.summary;
-    // long ranges: weekly averages keep the chart readable
+    const d = state.data, s = d.summary, all = d.weights;
+    const N = state.days, end = all.at(-1)?.date || lastDate(), first = all[0]?.date || end;
+    // sliding window: offset 0 = the latest N days, 1 = the N days before that, …
+    const maxOff = N ? Math.max(0, Math.floor(daysBetween(parse(first), parse(end)) / N)) : 0;
+    state.bodyOffset = Math.min(state.bodyOffset || 0, maxOff);
+    const off = N ? state.bodyOffset : 0;
+    const winEnd = iso(addDays(parse(end), -off * N)), winStart = N ? iso(addDays(parse(winEnd), -(N - 1))) : first;
+    const wtAll = all.filter(x => x.date >= winStart && x.date <= winEnd);
     const weekly = wtAll.length > 150;
     const wt = weekly ? groupBy(wtAll, "week", "weight").map(g => ({ date: g.key, weight: +g.avg.toFixed(1) })) : wtAll;
-    const last = d.weights.at(-1);
-    const years = groupBy(d.weights, "year", "weight");
+    const last = all.at(-1);
+    const years = groupBy(all, "year", "weight");
+    const marks = bodyMarks || defaultMarks();
+    const winLabel = N ? `${fmtLong(winStart)} – ${fmtLong(winEnd)}` : `${fmtLong(first)} – ${fmtLong(end)}`;
+    const chg = wtAll.length > 1 ? wtAll.at(-1).weight - wtAll[0].weight : null;
+
+    // typical year: each month's average minus that year's average, averaged over years with ≥ 8 months of weigh-ins
+    const byYM = groupBy(all, "month", "weight");
+    const yrAvg = Object.fromEntries(years.map(y => [y.key, y.avg]));
+    const monthsPerYear = {}; byYM.forEach(g => monthsPerYear[g.key.slice(0, 4)] = (monthsPerYear[g.key.slice(0, 4)] || 0) + 1);
+    const season = Array.from({ length: 12 }, (_, m) => {
+      const v = byYM.filter(g => +g.key.slice(5, 7) === m + 1 && monthsPerYear[g.key.slice(0, 4)] >= 8).map(g => g.avg - yrAvg[g.key.slice(0, 4)]);
+      return { m, dev: v.length ? avg(v) : null, n: v.length };
+    });
+    const seasonYears = Object.values(monthsPerYear).filter(n => n >= 8).length;
+    const hi = season.filter(x => x.dev != null).reduce((a, b) => b.dev > a.dev ? b : a, { dev: -1e9 });
+    const lo = season.filter(x => x.dev != null).reduce((a, b) => b.dev < a.dev ? b : a, { dev: 1e9 });
+    const mName = m => new Date(2000, m, 1).toLocaleDateString(undefined, { month: "long" });
+
     $("#page-body").innerHTML = `<h2>Body</h2>
     <div class="grid">
       ${tile("Latest weight", round(last?.weight, 1), "lb", last ? fmtLong(last.date) : "")}
-      ${tile(`Change (${rangeLabel()})`, wtAll.length > 1 ? (wtAll.at(-1).weight - wtAll[0].weight > 0 ? "+" : "") + round(wtAll.at(-1).weight - wtAll[0].weight, 1) : "–", "lb", wtAll.length > 1 ? `from ${round(wtAll[0].weight, 1)} on ${fmtDay(wtAll[0].date)}` : "")}
+      ${tile(off ? "Change (this window)" : `Change (${rangeLabel()})`, chg != null ? (chg > 0 ? "+" : "") + round(chg, 1) : "–", "lb", chg != null ? `${round(wtAll[0].weight, 1)} on ${fmtDay(wtAll[0].date)} → ${round(wtAll.at(-1).weight, 1)} on ${fmtDay(wtAll.at(-1).date)}` : "no weigh-ins in this window")}
       ${tile("To goal", last ? round(last.weight - T.weightGoal, 1) : "–", "lb", `goal ~${T.weightGoal} lb by Jul 2027`)}
-      ${tile("Range", wtAll.length ? `${round(Math.min(...wtAll.map(x => x.weight)), 1)}–${round(Math.max(...wtAll.map(x => x.weight)), 1)}` : "–", "lb", `${wtAll.length.toLocaleString()} weigh-ins`)}
+      ${tile(off ? "Range (this window)" : "Range", wtAll.length ? `${round(Math.min(...wtAll.map(x => x.weight)), 1)}–${round(Math.max(...wtAll.map(x => x.weight)), 1)}` : "–", "lb", `${wtAll.length.toLocaleString()} weigh-ins`)}
     </div>
     <div class="grid">
-      ${card("c8", "Weight", `${rangeLabel()} · ${weekly ? "weekly averages" : "line = 7-reading average"} · dashed = goal`, canvas("bd-wt", "tall"))}
+      <div class="card c12">
+        <h3>Weight</h3>
+        <p class="sub">${winLabel} · ${weekly ? "weekly averages" : "line = 7-reading average"} · dashed = goal${marks.holidays ? " · shaded = holidays (Nov 20 – Jan 5)" : ""}</p>
+        <div class="win-bar">
+          ${N ? `<button class="chip" id="win-prev" ${off >= maxOff ? "disabled" : ""} aria-label="Earlier window">◀ Earlier</button>
+          <input type="range" id="win-slider" min="0" max="${maxOff}" value="${maxOff - off}" aria-label="Slide through ${N}-day windows">
+          <button class="chip" id="win-next" ${off === 0 ? "disabled" : ""} aria-label="Later window">Later ▶</button>
+          ${off ? `<button class="chip" id="win-latest">Latest</button>` : ""}` : ""}
+          <span class="win-marks">Lines:
+            ${["year", "quarter", "month", "holidays"].map(k => `<button class="chip ${marks[k] ? "on" : ""}" data-mark="${k}">${k[0].toUpperCase() + k.slice(1)}</button>`).join("")}
+          </span>
+        </div>
+        ${wt.length ? canvas("bd-wt", "tall") : `<p class="sub">No weigh-ins between ${fmtDay(winStart)} and ${fmtDay(winEnd)}. Slide to another window.</p>`}
+      </div>
+    </div>
+    <div class="grid">
+      ${card("c8", "Your typical year", `How each month compares with that year's average · ${seasonYears} years with 8+ months of weigh-ins${hi.n ? ` · heaviest in <b>${mName(hi.m)}</b> (+${round(hi.dev, 1)} lb), lightest in <b>${mName(lo.m)}</b> (${round(lo.dev, 1)} lb)` : ""}`, canvas("bd-season"))}
       ${card("c4", "Profile & goals", "From the Summary tab", `<dl class="kv">${["Goal", "Targets", "Body composition (Kalos DEXA Oct 5, 2026)", "Height", "Age"].filter(k => s[k]).map(k => `<dt>${esc(k.replace(/\s*\(.*\)/, ""))}</dt><dd>${esc(s[k])}${/DEXA/.test(k) ? '<br><span class="sub">DEXA Oct 5, 2026</span>' : ""}</dd>`).join("")}</dl>`)}
     </div>
     <div class="grid">
       ${card("c12", `Weight by year, ${years[0]?.key}–${years.at(-1)?.key}`, "Daily weigh-ins · bar spans lightest to heaviest, dot = average · see History for more", canvas("bd-years", "tall"))}
     </div>`;
 
-    const wOpts = baseOpts(); wOpts.scales.y.beginAtZero = false;
-    chart("bd-wt", { data: { labels: wt.map(x => weekly ? `wk ${fmtDay(x.date)}${state.days ? "" : " " + x.date.slice(2, 4)}` : fmtDay(x.date)), datasets: weekly ? [
-      line("Weekly avg", wt.map(x => x.weight), css("--s1"), { tension: 0.2 }),
-      goal("Goal", wt.length, T.weightGoal, css("--good")),
-    ] : [
-      line("Weigh-in", wt.map(x => x.weight), css("--s1") + "88", { pointRadius: 3, tension: 0, borderWidth: 1 }),
-      line("7-reading avg", rolling(wt.map(x => x.weight), 7), css("--s1")),
-      goal("Goal", wt.length, T.weightGoal, css("--good")),
-    ] }, options: wOpts });
+    // window controls
+    const go = o => { state.bodyOffset = Math.max(0, Math.min(maxOff, o)); render(); };
+    if (N) {
+      $("#win-prev").onclick = () => go(off + 1);
+      $("#win-next").onclick = () => go(off - 1);
+      if ($("#win-latest")) $("#win-latest").onclick = () => go(0);
+      $("#win-slider").onchange = e => go(maxOff - +e.target.value);
+      $("#win-slider").oninput = e => { const o = maxOff - +e.target.value, we = iso(addDays(parse(end), -o * N)); $(".win-bar").title = `${fmtLong(iso(addDays(parse(we), -(N - 1))))} – ${fmtLong(we)}`; };
+    }
+    document.querySelectorAll("[data-mark]").forEach(b => b.onclick = () => { bodyMarks = { ...marks, [b.dataset.mark]: !marks[b.dataset.mark] }; render(); });
+
+    if (wt.length) {
+      const wOpts = baseOpts(); wOpts.scales.y.beginAtZero = false;
+      wOpts.plugins.periodMarks = { dates: wt.map(x => x.date), show: marks };
+      wOpts.layout = { padding: { top: 14 } };
+      chart("bd-wt", { plugins: [periodMarks], data: { labels: wt.map(x => weekly ? `wk ${fmtDay(x.date)} ${x.date.slice(2, 4)}` : fmtDay(x.date) + (N > 90 ? " " + x.date.slice(2, 4) : "")), datasets: weekly ? [
+        line("Weekly avg", wt.map(x => x.weight), css("--s1"), { tension: 0.2 }),
+        goal("Goal", wt.length, T.weightGoal, css("--good")),
+      ] : [
+        line("Weigh-in", wt.map(x => x.weight), css("--s1") + "88", { pointRadius: wt.length > 120 ? 1.5 : 3, tension: 0, borderWidth: 1 }),
+        line("7-reading avg", rolling(wt.map(x => x.weight), 7), css("--s1")),
+        goal("Goal", wt.length, T.weightGoal, css("--good")),
+      ] }, options: wOpts });
+    }
+
+    const so = baseOpts({ plugins: { ...baseOpts().plugins, legend: { display: false }, tooltip: { ...baseOpts().plugins.tooltip, callbacks: { label: c => season[c.dataIndex].dev == null ? "no data" : `${c.parsed.y > 0 ? "+" : ""}${round(c.parsed.y, 1)} lb vs that year's average (${season[c.dataIndex].n} years)` } } } });
+    so.scales.y.beginAtZero = true; so.scales.y.ticks = { ...so.scales.y.ticks, callback: v => (v > 0 ? "+" : "") + v };
+    chart("bd-season", { type: "bar", data: { labels: season.map(x => new Date(2000, x.m, 1).toLocaleDateString(undefined, { month: "short" })), datasets: [bar("vs year average", season.map(x => x.dev == null ? null : +x.dev.toFixed(2)), season.map(x => x.dev > 0 ? css("--s2") : css("--s1")), { borderSkipped: "start", maxBarThickness: 32 })] }, options: so });
 
     const yOpts = baseOpts(); yOpts.scales.y.beginAtZero = false;
     yOpts.plugins.tooltip = { ...yOpts.plugins.tooltip, callbacks: { label: c => c.datasetIndex === 0 ? `Range: ${round(c.raw[0], 1)}–${round(c.raw[1], 1)} lb` : `Average: ${round(c.parsed.y, 1)} lb (${years[c.dataIndex].values.length} days)` } };
@@ -801,7 +911,7 @@
     render();
   };
   try { const r = localStorage.getItem("fd-range"); if (r != null) state.days = +r; } catch {}
-  $("#range").onclick = e => { const b = e.target.closest("button"); if (!b) return; state.days = +b.dataset.days; try { localStorage.setItem("fd-range", state.days); } catch {} render(); };
+  $("#range").onclick = e => { const b = e.target.closest("button"); if (!b) return; state.days = +b.dataset.days; state.bodyOffset = 0; bodyMarks = null; try { localStorage.setItem("fd-range", state.days); } catch {} render(); };
   $("#reload").onclick = load;
   $("#sheet-link").href = CFG.sheetUrl;
   addEventListener("hashchange", render);
