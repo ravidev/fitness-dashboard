@@ -738,6 +738,32 @@
     chart("rc-years", { type: "bar", data: { labels: years, datasets: ds }, options: o });
   }
 
+  // ── analytics (GoatCounter: no cookies, no personal data) ────
+  const GC = CFG.goatcounter;
+  const gcQueue = [];
+  function track(path, title, event) {
+    if (!GC) return;
+    const send = () => window.goatcounter.count({ path, title: title || path, event: !!event });
+    window.goatcounter && window.goatcounter.count ? send() : gcQueue.push(send);
+  }
+  if (GC) {
+    window.goatcounter = { no_onload: true, allow_local: false };
+    const sc = document.createElement("script");
+    sc.async = true; sc.src = "https://gc.zgo.at/count.js";
+    sc.dataset.goatcounter = `https://${GC}.goatcounter.com/count`;
+    sc.onload = () => { while (gcQueue.length) gcQueue.shift()(); };
+    document.head.appendChild(sc);
+    // one listener for every button/chip/tab click: "click: <section> / <label>"
+    document.addEventListener("click", e => {
+      const el = e.target.closest("button, .chip, #tabs a, a[href]");
+      if (!el) return;
+      const label = (el.dataset.days != null ? (+el.dataset.days ? el.textContent : "All") : el.getAttribute("aria-label") || el.textContent || "").trim().slice(0, 40);
+      const where = el.closest("#tabs") ? "tab" : el.closest("#range") ? "range" : el.id === "theme" ? "theme" : el.id === "reload" ? "reload" : el.id === "sheet-link" ? "sheet-link" : state.page;
+      track(`click: ${where} / ${label}`, null, true);
+    }, true);
+  }
+  let lastTracked = null;
+
   // ── shell ───────────────────────────────────────────────────
   const PAGES = { overview: renderOverview, training: renderTraining, nutrition: renderNutrition, sleep: renderSleep, body: renderBody, bp: renderBP, history: renderHistory, races: renderRaces };
 
@@ -748,6 +774,7 @@
     document.querySelectorAll("#range button").forEach(b => b.classList.toggle("on", +b.dataset.days === state.days));
     $("#range").style.display = state.page === "history" || state.page === "races" ? "none" : "";
     document.querySelectorAll("section.page").forEach(s => s.classList.toggle("on", s.id === "page-" + state.page));
+    if (lastTracked !== state.page) { lastTracked = state.page; track(`/${state.page}`, `${state.page[0].toUpperCase()}${state.page.slice(1)} · Fitness Dashboard`); }
     try { PAGES[state.page](); } catch (e) { console.error(e); $("#page-" + state.page).innerHTML = `<p class="sub">Couldn't draw this page: ${esc(e.message)}</p>`; }
   }
 
