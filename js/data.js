@@ -199,6 +199,8 @@
         finish: r[5], confirmation: r[6], cost: r[7], notes: r[8],
         possible: /^possible race/i.test(r[1]),
         completed: /^completed/i.test(r[4]) || /^partial/i.test(r[4]),
+        likely: /check result|finish not confirmed/i.test(r[4]),
+        considering: /consider|drawing|pending/i.test(r[4]),
         registered: /registered|entered/i.test(r[4]) && !/not registered|likely did not/i.test(r[4]),
         category: raceCat(r[3]),
       });

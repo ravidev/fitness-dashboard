@@ -688,29 +688,36 @@
     const d = state.data, now = today();
     const races = d.races;
     const upcoming = races.filter(r => r.d >= now);
-    const done = races.filter(r => r.completed && !r.possible);
+    // "Run" = confirmed finishes + races registered for with the result not yet checked
+    const done = races.filter(r => !r.possible && r.d < now && (r.completed || r.likely));
+    const conf = done.filter(r => r.completed), likely = done.filter(r => !r.completed);
     const years = [...new Set(done.map(r => r.d.getFullYear()))].sort();
     const cats = ["Half marathon", "Marathon", "Triathlon", "70.3", "Other"].filter(c => done.some(r => r.category === c));
     const catColor = { "Half marathon": css("--s1"), Marathon: css("--s2"), Triathlon: css("--s3"), "70.3": css("--s7"), Other: css("--other") };
+    const cnt = (list, f) => list.filter(f).length;
+    const split = f => { const a = cnt(conf, f), b = cnt(likely, f); return b ? `${a} confirmed + ${b} likely` : `${a} confirmed`; };
+    const isTri = r => /Triathlon|70\.3/.test(r.category) || /aquathon/i.test(r.kind || "");
+    const reg = upcoming.filter(r => r.registered && !r.considering), cons = upcoming.filter(r => r.considering);
 
     $("#page-races").innerHTML = `<h2>Races</h2>
+    <p class="sub">Counts include races marked <b>Completed</b> or <b>Partial</b> plus <b>likely</b> finishes (status "Check result" or "finish not confirmed"). Races marked "likely did not run", "Did not start" and Fitbit-only possible days are left out.</p>
     <div class="grid">
-      ${tile("Upcoming (registered)", upcoming.filter(r => r.registered).length, "", upcoming.filter(r => r.registered)[0] ? `next: ${esc(upcoming.filter(r => r.registered)[0].name)}` : "")}
-      ${tile("Completed races", done.length, "", `since ${years[0] || "–"}`)}
-      ${tile("Marathons", done.filter(r => r.category === "Marathon").length, "", "completed")}
-      ${tile("Triathlons", done.filter(r => /Triathlon|70\.3/.test(r.category)).length, "", "completed or partial")}
+      ${tile("Races run", done.length, "", `${conf.length} confirmed + ${likely.length} likely · since ${years[0] || "–"}`)}
+      ${tile("Half marathons", cnt(done, r => r.category === "Half marathon"), "", split(r => r.category === "Half marathon"))}
+      ${tile("Triathlons & aquathons", cnt(done, isTri), "", split(isTri))}
+      ${tile("Coming up", reg.length + cons.length, "", `${reg.length} registered${cons.length ? ` · ${cons.length} considering / in drawing` : ""}${reg[0] ? ` · next: ${esc(reg[0].name)}` : ""}`)}
     </div>
     <div class="grid">
-      ${card("c6", "Coming up", "Everything on the race list from today", `<div class="race-list">${upcoming.map(r => raceRow(r).replace('<div class="meta">', `<div class="meta"><span class="pill">${esc(r.status)}</span> `)).join("")}</div>`)}
-      ${card("c6", "Completed races per year", "", canvas("rc-years", "tall"))}
+      ${card("c6", "Coming up", "Everything on the race list from today, including ones you're considering", `<div class="race-list">${upcoming.map(r => raceRow(r).replace('<div class="meta">', `<div class="meta"><span class="pill">${esc(r.status)}</span> `)).join("")}</div>`)}
+      ${card("c6", "Races run per year", "Solid = confirmed, light = likely (result not checked)", canvas("rc-years", "tall"))}
     </div>
     <div class="grid">${card("c12", "Race history", "", `<div class="filters" id="rc-filters">
-      <button class="chip ${raceFilter === "real" ? "on" : ""}" data-f="real">Races</button>
-      <button class="chip ${raceFilter === "done" ? "on" : ""}" data-f="done">Completed</button>
+      <button class="chip ${raceFilter === "real" ? "on" : ""}" data-f="real">All races</button>
+      <button class="chip ${raceFilter === "done" ? "on" : ""}" data-f="done">Run (confirmed + likely)</button>
       <button class="chip ${raceFilter === "all" ? "on" : ""}" data-f="all">Include possible (Fitbit) days</button></div><div id="rc-table"></div>`)}</div>`;
 
     const drawTable = () => {
-      const rows = races.filter(r => raceFilter === "all" ? true : raceFilter === "done" ? r.completed && !r.possible : !r.possible).map(r => ({ ...r, _cls: r.completed ? "done" : "" }));
+      const rows = races.filter(r => raceFilter === "all" ? true : raceFilter === "done" ? done.includes(r) : !r.possible).map(r => ({ ...r, _cls: r.completed || (r.likely && r.d < now) ? "done" : "" }));
       $("#rc-table").innerHTML = sortableTable("rc-t", [
         { key: "date", label: "Date", fmt: v => fmtLong(v) }, { key: "name", label: "Race", cls: "wrap" },
         { key: "location", label: "Location" }, { key: "category", label: "Type" }, { key: "status", label: "Status", cls: "wrap" },
@@ -722,7 +729,13 @@
 
     const o = baseOpts(); o.scales.x.stacked = true; o.scales.y.stacked = true; o.scales.y.ticks.stepSize = 1;
     o.plugins.tooltip = { ...o.plugins.tooltip, filter: i => i.parsed.y > 0 };
-    chart("rc-years", { type: "bar", data: { labels: years, datasets: cats.map(c => bar(c, years.map(y => done.filter(r => r.category === c && r.d.getFullYear() === y).length), catColor[c], { borderRadius: 0, borderColor: css("--surface"), borderWidth: { top: 2 }, maxBarThickness: 36 })) }, options: o });
+    o.plugins.legend.labels = { ...o.plugins.legend.labels, filter: it => !/likely/.test(it.text) };
+    const ds = [];
+    for (const c of cats) {
+      ds.push(bar(c, years.map(y => conf.filter(r => r.category === c && r.d.getFullYear() === y).length), catColor[c], { borderRadius: 0, borderColor: css("--surface"), borderWidth: { top: 2 }, maxBarThickness: 36 }));
+      if (likely.some(r => r.category === c)) ds.push(bar(`${c} (likely)`, years.map(y => likely.filter(r => r.category === c && r.d.getFullYear() === y).length), catColor[c] + "66", { borderRadius: 0, borderColor: css("--surface"), borderWidth: { top: 2 }, maxBarThickness: 36 }));
+    }
+    chart("rc-years", { type: "bar", data: { labels: years, datasets: ds }, options: o });
   }
 
   // ── shell ───────────────────────────────────────────────────
