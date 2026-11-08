@@ -5,7 +5,7 @@ A static website that turns the **Ravi Fitness – Sleep, Workouts & Food** Goog
 | Page | What it shows |
 |---|---|
 | **Overview** | This week vs last week (sleep, score, protein, intake, training, weight), auto-generated insights, race countdowns |
-| **Training** | Weekly hours by sport, sport mix, activity calendar, totals, filterable workout log |
+| **Training** | Highlights carousel (animated swim/bike/run cards, photos from `data/photos.json` when added), then Weekly hours by sport, sport mix, activity calendar, totals, filterable workout log |
 | **Nutrition** | Calories vs FITTR target, protein vs 140 g, macro split, calories by time of day, weekly averages, top foods |
 | **Sleep** | Time asleep vs 7 h, stages, score labels, HRV trend, bedtime vs score, nightly table |
 | **Body** | Weight trend vs goal (DailyStats + historical weigh-ins), profile/DEXA, weight by year |

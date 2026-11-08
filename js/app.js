@@ -401,6 +401,61 @@
   }
 
   let trainFilter = "All";
+  // ── Workout highlights: animated sport cards (photo replaces the scene when one exists) ──
+  const SCENES = {
+    Swim: `<div class="scn swim"><i class="wave w1"></i><i class="wave w2"></i><i class="wave w3"></i>
+      <b class="bub" style="--x:12%;--d:0s"></b><b class="bub" style="--x:28%;--d:1.2s"></b><b class="bub" style="--x:46%;--d:.6s"></b><b class="bub" style="--x:64%;--d:1.8s"></b><b class="bub" style="--x:82%;--d:.9s"></b>
+      <svg class="ico" viewBox="0 0 64 64" aria-hidden="true"><circle cx="44" cy="18" r="6"/><path d="M8 40c6 0 6-4 12-4s6 4 12 4 6-4 12-4 6 4 12 4" /><path d="M14 30l14-8 10 6 8-4"/></svg></div>`,
+    Bike: `<div class="scn bike"><i class="hills h1"></i><i class="hills h2"></i><i class="road"></i>
+      <svg class="ico wheel-pair" viewBox="0 0 96 56" aria-hidden="true"><g class="wheel" style="transform-origin:22px 36px"><circle cx="22" cy="36" r="16"/><path d="M22 20v32M6 36h32M11 25l22 22M33 25L11 47"/></g><g class="wheel" style="transform-origin:74px 36px"><circle cx="74" cy="36" r="16"/><path d="M74 20v32M58 36h32M63 25l22 22M85 25L63 47"/></g><path d="M22 36l18-20h22l12 20M40 16l8 20h-26M58 10h8"/></svg></div>`,
+    Run: `<div class="scn run"><i class="sun"></i><i class="hills h1"></i><i class="hills h2"></i><i class="track"></i>
+      <svg class="ico runner" viewBox="0 0 64 64" aria-hidden="true"><circle cx="38" cy="10" r="6"/><path d="M34 20l-8 14 10 6-4 16M34 20l10 10 10-2M30 26l-12 2M26 34l-10 12"/></svg></div>`,
+  };
+  const pace = w => {
+    if (!w.min || !w.mi) return "";
+    if (w.sport === "Run") { const p = w.min / w.mi; return `${Math.floor(p)}:${String(Math.round((p % 1) * 60)).padStart(2, "0")} /mi`; }
+    if (w.sport === "Bike") return `${round(w.mi / (w.min / 60), 1)} mph`;
+    const p = w.min / (w.mi * 17.6); return `${Math.floor(p)}:${String(Math.round((p % 1) * 60)).padStart(2, "0")} /100yd`;
+  };
+  function highlights(list) {
+    const photos = state.data.photos || [];
+    const cards = list.map(w => {
+      const ph = photos.find(p => p.date === w.date && (!p.sport || p.sport === w.sport));
+      const bg = ph ? `<div class="scn photo"><img src="${esc(ph.src)}" alt="" loading="lazy"></div>` : SCENES[w.sport];
+      const stats = [w.mi ? `${round(w.mi, w.sport === "Bike" ? 1 : 2)} mi` : "", w.min ? (w.min < 60 ? `${Math.round(w.min)} min` : hhmm(w.min)) : "", pace(w), w.hr ? `${w.hr} bpm` : "", w.kcal ? `${round(w.kcal)} kcal` : ""].filter(Boolean);
+      return `<article class="hl ${w.sport.toLowerCase()}">${bg}
+        <div class="hl-body">
+          <div class="hl-top"><span class="hl-sport">${w.sport}</span>${w.race || /\btri\b|half marathon|race leg|marathon/i.test(w.desc || "") ? '<span class="hl-race">Race</span>' : ""}</div>
+          <div class="hl-title">${esc((w.desc || w.type).split(/[;(]/)[0].trim())}</div>
+          <div class="hl-date">${fmtLong(w.date)}</div>
+          <div class="hl-stats">${stats.map(x => `<span>${x}</span>`).join("")}</div>
+        </div></article>`;
+    }).join("");
+    return `<div class="hl-wrap"><div class="hl-row" id="hl-row" tabindex="0" aria-label="Workout highlights">${cards}</div>
+      <div class="hl-nav"><button class="chip" id="hl-prev" aria-label="Previous highlight">◀</button><span id="hl-dots"></span><button class="chip" id="hl-next" aria-label="Next highlight">▶</button><button class="chip" id="hl-play" aria-label="Pause auto-play">❚❚ Pause</button></div></div>`;
+  }
+  let hlTimer = null;
+  function startHighlights() {
+    clearInterval(hlTimer);
+    const row = $("#hl-row"); if (!row) return;
+    const cards = [...row.children]; if (!cards.length) return;
+    const dots = $("#hl-dots");
+    dots.innerHTML = cards.map((_, i) => `<i data-i="${i}"></i>`).join("");
+    let idx = 0, playing = !matchMedia("(prefers-reduced-motion: reduce)").matches, hover = false;
+    const go = i => { idx = (i + cards.length) % cards.length; row.scrollTo({ left: cards[idx].offsetLeft - row.offsetLeft, behavior: "smooth" }); mark(); };
+    const mark = () => dots.querySelectorAll("i").forEach((d, i) => d.classList.toggle("on", i === idx));
+    row.addEventListener("scroll", () => { const w = cards[0].offsetWidth + 12; const i = Math.round(row.scrollLeft / w); if (i !== idx) { idx = Math.min(i, cards.length - 1); mark(); } }, { passive: true });
+    $("#hl-prev").onclick = () => go(idx - 1); $("#hl-next").onclick = () => go(idx + 1);
+    dots.onclick = e => { const t = e.target.closest("i"); if (t) go(+t.dataset.i); };
+    const btn = $("#hl-play");
+    const label = () => { btn.textContent = playing ? "❚❚ Pause" : "▶ Play"; btn.setAttribute("aria-label", playing ? "Pause auto-play" : "Start auto-play"); };
+    btn.onclick = () => { playing = !playing; label(); };
+    row.onmouseenter = () => hover = true; row.onmouseleave = () => hover = false;
+    row.addEventListener("touchstart", () => { playing = false; label(); }, { passive: true });
+    label(); mark();
+    hlTimer = setInterval(() => { if (playing && !hover && document.visibilityState === "visible" && $("#hl-row") === row) go(idx + 1); }, 5000);
+  }
+
   function renderTraining() {
     const d = state.data, wo = inRange(d.workouts);
     const bySport = Object.fromEntries(SPORTS.map(s => [s, wo.filter(w => w.sport === s)]));
@@ -410,7 +465,11 @@
     const weeks = [...new Set(wo.map(w => weekStart(w.date)))].sort();
     const rowsFor = () => trainFilter === "All" ? wo : wo.filter(w => w.sport === trainFilter);
 
+    let hlList = wo.filter(w => ["Swim", "Bike", "Run"].includes(w.sport)).slice().reverse().slice(0, 12);
+    const hlFallback = !hlList.length;
+    if (hlFallback) hlList = d.workouts.filter(w => ["Swim", "Bike", "Run"].includes(w.sport)).slice(-6).reverse();
     $("#page-training").innerHTML = `<h2>Training</h2>
+    ${hlList.length ? `<div class="grid">${card("c12", "Highlights", `${hlFallback ? "Latest swims, rides and runs (none in " + rangeLabel() + ")" : `Swims, rides and runs · ${rangeLabel()}`} · auto-plays, swipe or use the arrows`, highlights(hlList))}</div>` : ""}
     <div class="grid">
       ${tile("Sessions", wo.length, "", `${new Set(wo.map(w => w.date)).size} active days · ${rangeLabel()}`)}
       ${tile("Time", round(sum(wo.map(w => w.min)) / 60, 1), "h", `${round(sum(wo.map(w => w.min)) / 60 / Math.max(1, weeks.length), 1)} h per week`)}
@@ -443,6 +502,7 @@
       ], rowsFor());
     };
     drawLog();
+    startHighlights();
     $("#tr-filters").onclick = e => { const b = e.target.closest(".chip"); if (!b) return; trainFilter = b.dataset.s; $("#tr-filters").querySelectorAll(".chip").forEach(c => c.classList.toggle("on", c === b)); drawLog(); };
 
     const st = inRange(d.steps);
@@ -878,7 +938,7 @@
   const PAGES = { overview: renderOverview, training: renderTraining, nutrition: renderNutrition, sleep: renderSleep, body: renderBody, bp: renderBP, history: renderHistory, races: renderRaces };
 
   function render() {
-    state.charts.forEach(c => c.destroy()); state.charts = [];
+    state.charts.forEach(c => c.destroy()); state.charts = []; clearInterval(hlTimer);
     state.page = PAGES[location.hash.slice(1)] ? location.hash.slice(1) : "overview";
     document.querySelectorAll("#tabs a").forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + state.page));
     document.querySelectorAll("#range button").forEach(b => b.classList.toggle("on", +b.dataset.days === state.days));

@@ -262,6 +262,8 @@
       const keys = Object.keys(CFG.tabs);
       const res = await Promise.all(keys.map(loadTab));
       const raw = Object.fromEntries(keys.map((k, i) => [k, res[i]]));
+      let photos = [];
+      try { photos = await (await fetch("data/photos.json", { cache: "no-store" })).json(); } catch {}
       const food = parseFood(raw.foodlog.rows);
       const recentWeights = parseWeights(raw.dailystats.rows);
       const sleep = parseSleep(raw.sleep.rows);
@@ -280,7 +282,7 @@
       return {
         sources,
         summary: parseSummary(raw.summary.rows),
-        sleep, sleepHistory, steps, bp,
+        sleep, sleepHistory, steps, bp, photos,
         workouts: parseWorkouts(raw.workouts.rows),
         nutrition: Object.values(food.days).sort((a, b) => a.date.localeCompare(b.date)),
         foodItems: food.items,
