@@ -39,6 +39,24 @@
     </div>
   </header>
 
+  <!-- Festive banner: shown between the dates in FD_CONFIG.festive, dismissible -->
+  <div id="festive" class="festive" hidden role="region" aria-label="Diwali greeting">
+    <div class="fx" aria-hidden="true">
+      <span class="burst b1"></span><span class="burst b2"></span><span class="burst b3"></span><span class="burst b4"></span>
+      <i class="spark" style="--x:6%;--d:0s"></i><i class="spark" style="--x:18%;--d:1.1s"></i><i class="spark" style="--x:31%;--d:.4s"></i>
+      <i class="spark" style="--x:47%;--d:1.7s"></i><i class="spark" style="--x:63%;--d:.8s"></i><i class="spark" style="--x:78%;--d:2.2s"></i><i class="spark" style="--x:91%;--d:1.4s"></i>
+    </div>
+    <div class="festive-row">
+      <span class="diya" aria-hidden="true"><span class="flame"></span></span>
+      <div class="festive-text">
+        <b>Happy Diwali!</b>
+        <span>Wishing you light, health and many more finish lines.</span>
+      </div>
+      <span class="diya" aria-hidden="true"><span class="flame"></span></span>
+      <button id="festive-close" class="festive-close" aria-label="Hide Diwali greeting">×</button>
+    </div>
+  </div>
+
   <main id="app">
     <p class="loading">Loading your data…</p>
   </main>

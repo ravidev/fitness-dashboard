@@ -902,6 +902,17 @@
     render();
   }
 
+  // festive banner (dates in config, visitor's local date)
+  (function festive() {
+    const f = CFG.festive, el = $("#festive");
+    if (!f || !el) return;
+    const today = iso(new Date());
+    if (today < f.start || today > f.end) return;
+    el.hidden = false;
+    // "×" hides it for this visit only; it shows again on every new visit during the festive week
+    $("#festive-close").onclick = () => { el.hidden = true; };
+  })();
+
   // theme
   try { const t = localStorage.getItem("fd-theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
   $("#theme").onclick = () => {
