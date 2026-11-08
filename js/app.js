@@ -935,11 +935,11 @@
   let lastTracked = null;
 
   // ── shell ───────────────────────────────────────────────────
-  const PAGES = { overview: renderOverview, training: renderTraining, nutrition: renderNutrition, sleep: renderSleep, body: renderBody, bp: renderBP, history: renderHistory, races: renderRaces };
+  const PAGES = { training: renderTraining, overview: renderOverview, nutrition: renderNutrition, sleep: renderSleep, body: renderBody, bp: renderBP, history: renderHistory, races: renderRaces };
 
   function render() {
     state.charts.forEach(c => c.destroy()); state.charts = []; clearInterval(hlTimer);
-    state.page = PAGES[location.hash.slice(1)] ? location.hash.slice(1) : "overview";
+    state.page = PAGES[location.hash.slice(1)] ? location.hash.slice(1) : "training"; // landing page
     document.querySelectorAll("#tabs a").forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + state.page));
     document.querySelectorAll("#range button").forEach(b => b.classList.toggle("on", +b.dataset.days === state.days));
     $("#range").style.display = state.page === "history" || state.page === "races" ? "none" : "";
