@@ -246,3 +246,18 @@ tr.done td:first-child { box-shadow: inset 3px 0 0 var(--good); }
 .scn.photo img { width: 100%; height: 100%; object-fit: cover; animation: kb 14s ease-in-out infinite alternate; }
 @keyframes kb { from { transform: scale(1) translate(0, 0); } to { transform: scale(1.12) translate(-3%, -2%); } }
 @media (prefers-reduced-motion: reduce) { .scn *, .scn .ico, .wheel, .runner { animation: none !important; } }
+
+/* Diwali song button + mini player (YouTube embed, only on click) */
+.festive-song { flex: none; border: 1px solid rgba(255, 211, 107, .6); background: rgba(255, 211, 107, .15); color: #ffe9c2; border-radius: 99px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+.festive-song:hover { background: rgba(255, 211, 107, .28); }
+.song-player { position: fixed; right: 16px; bottom: 16px; z-index: 60; width: 220px; padding: 8px; border-radius: 14px; background: #2a0b2e; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+.song-player iframe { display: block; width: 100%; aspect-ratio: 9 / 16; border: 0; border-radius: 10px; }
+.song-player a { display: block; text-align: center; font-size: 12px; color: #ffd36b; margin-top: 6px; }
+.song-close { position: absolute; top: -10px; right: -10px; width: 28px; height: 28px; border-radius: 50%; border: 0; background: #ffd36b; color: #2a0b2e; font-size: 17px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+@media (max-width: 720px) {
+  .festive-row { flex-wrap: wrap; gap: 10px; }
+  .festive-text { flex: 1 1 0; min-width: 0; }
+  .festive-row::after { content: ""; order: 2; flex-basis: 100%; height: 0; }
+  .festive-song { order: 3; margin: 0 auto; }
+  .song-player { width: 170px; right: 12px; bottom: 12px; }
+}
