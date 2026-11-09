@@ -38,7 +38,7 @@ window.FD_CONFIG = {
   // Targets used for goal lines and "days on target" counts
   targets: {
     kcal: 2004,          // FITTR plan
-    protein: 140,        // Coach Mohana's goal (g/day)
+    protein: 140,        // Coach M's goal (g/day)
     proteinFittr: 120,   // FITTR plan protein
     carbs: 248,
     fat: 60,

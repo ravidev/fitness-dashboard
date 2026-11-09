@@ -104,10 +104,8 @@
     const out = [];
     for (const r of rows.slice(h + 1)) {
       if (!isIsoDate(r[0])) continue;
-      const bed = r[1], [bh, bm] = (bed || "").split(":").map(Number);
-      // bedtime as hours after 6 PM so midnight-crossing sorts correctly
-      let bedRel = null;
-      if (!isNaN(bh)) { bedRel = bh + bm/60 - 18; if (bedRel < 0) bedRel += 24; }
+      // bedtime as hours after 6 PM so midnight-crossing sorts correctly; accepts "23:13" and "12:24 AM"
+      const bed = r[1], bedRel = clockToRel(bed);
       out.push({
         date: r[0], bed, wake: r[2], sleepMin: hm(r[3]),
         deep: num(r[4]), light: num(r[5]), rem: num(r[6]), awake: num(r[7]),
@@ -233,10 +231,10 @@
   }
 
   // Health Historical Daily: one row per date back to 2013 (Google Health / Fitbit + Garmin)
-  function clockToRel(s) { // "12:18 AM" -> hours after 6 PM
-    const m = String(s || "").match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  function clockToRel(s) { // "12:18 AM" or "00:18" -> hours after 6 PM
+    const m = String(s || "").match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
     if (!m) return null;
-    let h = +m[1] % 12 + (/pm/i.test(m[3]) ? 12 : 0) + +m[2] / 60 - 18;
+    let h = (m[3] ? +m[1] % 12 + (/pm/i.test(m[3]) ? 12 : 0) : +m[1]) + +m[2] / 60 - 18;
     return h < 0 ? h + 24 : h;
   }
   function parseHealthDaily(rows) {

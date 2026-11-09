@@ -4,7 +4,7 @@ import sanitize
 wb = openpyxl.load_workbook(sys.argv[1], data_only=True)
 OUT = sys.argv[2]
 TABS = {'Summary':'summary','Workouts':'workouts','DailyStats':'dailystats','Food Log (items)':'foodlog','Sleep':'sleep',
-        'Naps':'naps','racelist':'racelist','Google Health':'google-health','Mohana Plan':'mohana-plan','Health Historical Daily':'health-daily'}
+        'Naps':'naps','racelist':'racelist','Google Health':'google-health','Coach M Plan':'coach-plan','Health Historical Daily':'health-daily'}
 def fmt(c):
     v, f = c.value, c.number_format or 'General'
     if v is None: return ''

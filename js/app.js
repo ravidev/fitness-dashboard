@@ -359,7 +359,7 @@
     <p class="sub">Days under 1,000 kcal (partial logs, CT-prep day) are left out of averages. Values are estimates from the food log.</p>
     <div class="grid">${card("c12", "Calories in", `${rangeLabel()} · dashed = ${T.kcal.toLocaleString()} kcal FITTR target`, canvas("nu-kcal"))}</div>
     <div class="grid">
-      ${card("c8", "Protein", `dashed = ${T.protein} g goal (Mohana) · dotted = ${T.proteinFittr} g (FITTR)`, canvas("nu-prot"))}
+      ${card("c8", "Protein", `dashed = ${T.protein} g goal (Coach M) · dotted = ${T.proteinFittr} g (FITTR)`, canvas("nu-prot"))}
       ${card("c4", "Where calories come from", "Average share of calories by macro", canvas("nu-macro"))}
     </div>
     <div class="grid">
@@ -600,7 +600,7 @@
 
   function renderBody() {
     const d = state.data, s = d.summary, all = d.weights;
-    const N = state.days, end = all.at(-1)?.date || lastDate(), first = all[0]?.date || end;
+    const N = state.days, end = lastDate(), first = all[0]?.date || end;
     // sliding window: offset 0 = the latest N days, 1 = the N days before that, …
     const maxOff = N ? Math.max(0, Math.floor(daysBetween(parse(first), parse(end)) / N)) : 0;
     state.bodyOffset = Math.min(state.bodyOffset || 0, maxOff);
@@ -775,6 +775,161 @@
     }
   }
 
+  // ── Insights: the "so what?" layer ─────────────────────────
+  // Every metric gets a status (on track / needs work / off track) and an action bucket.
+  const STATUS = {
+    green: { label: "On track", icon: "✓", color: "--good" },
+    amber: { label: "Needs work", icon: "!", color: "--warn" },
+    red:   { label: "Off track", icon: "✕", color: "--critical" },
+  };
+  function renderInsights() {
+    const d = state.data, end = lastDate();
+    const N = state.days || 30, endD = parse(end);
+    const start = iso(addDays(endD, -(N - 1))), prevEnd = iso(addDays(endD, -N));
+    const W = list => window_(list, end, N), P = list => { const w = window_(list, prevEnd, N); return w.length >= 0.7 * N ? w : null; };
+    const PW = list => list.length && list[0].date <= iso(addDays(endD, -(2 * N - 1))) ? window_(list, prevEnd, N) : null; // event logs (workouts)
+    const weeks = N / 7;
+    const goalTxt = d.summary["Goal"] || "";
+    const races = d.races.filter(r => r.d >= today() && r.registered && !r.considering);
+    const bigSur = races.find(r => /big sur/i.test(r.name)) || races[0];
+    const wksToRace = bigSur ? Math.max(0, Math.floor(daysBetween(today(), bigSur.d) / 7)) : null;
+    const rows = [];
+    const add = r => rows.push(r);
+    const trend = (cur, prev, digits, unit, goodUp) => {
+      if (cur == null || prev == null) return "";
+      const dlt = cur - prev; if (Math.abs(dlt) < Math.pow(10, -digits) / 2) return "flat";
+      const good = goodUp == null ? null : (dlt > 0) === goodUp;
+      return `<span class="${good == null ? "" : good ? "up-good" : "up-bad"}">${dlt > 0 ? "▲" : "▼"} ${round(Math.abs(dlt), digits)}${unit}</span>`;
+    };
+
+    // 1. Sleep
+    const sh = W(d.sleepHistory), shp = P(d.sleepHistory);
+    const sAvg = avg(sh.map(x => x.hours)), sPrev = shp && avg(shp.map(x => x.hours));
+    const gs = W(d.sleep), poor = gs.filter(x => x.label === "POOR").length;
+    const bedAvg = avg(gs.map(x => x.bedRel).filter(x => x != null));
+    if (sAvg != null) add({ key: "sleep", name: "Sleep", more: true, prio: 1,
+      status: sAvg >= T.sleepHours ? "green" : sAvg >= T.sleepHours - 0.5 ? "amber" : "red",
+      value: hhmm(sAvg * 60), target: `${T.sleepHours} h`, trend: trend(sAvg && sAvg * 60, sPrev && sPrev * 60, 0, " min", true),
+      detail: `${sh.filter(x => x.hours >= T.sleepHours).length} of ${sh.length} nights ≥ ${T.sleepHours} h · ${poor} POOR nights · avg bedtime ${fmtBed(bedAvg)}`,
+      action: `Lights out by 10:30 PM. Your average bedtime is ${fmtBed(bedAvg)}; you need about ${Math.max(0, Math.round((T.sleepHours - sAvg) * 60))} more minutes a night.` });
+
+    // 2. Protein
+    const nu = W(d.nutrition).filter(x => x.kcal > 1000), nup = (P(d.nutrition) || []).filter(x => x.kcal > 1000);
+    const pAvg = avg(nu.map(x => x.protein)), pPrev = nup.length ? avg(nup.map(x => x.protein)) : null;
+    const best = nu.filter(x => x.protein >= T.protein).sort((a, b) => Math.abs(a.kcal - T.kcal) - Math.abs(b.kcal - T.kcal))[0];
+    if (pAvg != null) add({ key: "protein", name: "Protein", more: true, prio: 2,
+      status: pAvg >= T.protein ? "green" : pAvg >= T.protein - 15 ? "amber" : "red",
+      value: `${round(pAvg)} g`, target: `${T.protein} g`, trend: trend(pAvg, pPrev, 0, " g", true),
+      detail: `${nu.filter(x => x.protein >= T.protein).length} of ${nu.length} days ≥ ${T.protein} g${best ? ` · best balance ${fmtDay(best.date)}: ${round(best.kcal)} kcal, ${round(best.protein)} g` : ""}`,
+      action: `Add about ${round(Math.max(0, T.protein - pAvg))} g of protein a day — one shake or Greek yogurt at breakfast closes it.` });
+
+    // 3. Calories (maintenance phase: net intake = food − exercise vs ${T.kcal})
+    const net = avg(nu.map(x => x.kcal - (x.burn || 0))), netPrev = nup.length ? avg(nup.map(x => x.kcal - (x.burn || 0))) : null;
+    const gross = avg(nu.map(x => x.kcal)), diff = net - T.kcal;
+    if (net != null) add({ key: "calories", name: "Calories (net of exercise)", more: diff < 0, prio: 4,
+      status: Math.abs(diff) <= 150 ? "green" : Math.abs(diff) <= 350 ? "amber" : "red",
+      value: `${round(net)} kcal`, target: `${T.kcal.toLocaleString()} (maintenance)`, trend: trend(net, netPrev, 0, " kcal", null),
+      detail: `${diff >= 0 ? "+" : ""}${round(diff)} kcal/day vs target · gross intake ${round(gross)} kcal`,
+      action: diff > 0 ? `Trim about ${round(diff)} kcal a day — late-night snacks are the easiest place to start.` : `You're ${round(-diff)} kcal a day under maintenance; add a snack on training days so you can build muscle.` });
+
+    // 4. Weight (build phase: stay steady near goal). Smoothed: first vs last 5 weigh-ins, so one odd reading can't swing it.
+    const wt = W(d.weights), k5 = Math.min(5, Math.floor(wt.length / 2));
+    const wA = k5 ? avg(wt.slice(0, k5).map(x => x.weight)) : null, wB = k5 ? avg(wt.slice(-k5).map(x => x.weight)) : null;
+    const chg = wA != null ? wB - wA : null, allow = 1.5 * N / 30;
+    if (chg != null) add({ key: "weight", name: "Weight trend", more: false, prio: 6,
+      status: Math.abs(chg) <= allow ? "green" : "amber",
+      value: `${round(wt.at(-1).weight, 1)} lb`, target: `steady · ~${T.weightGoal} lb by Jul 2027`, trend: `<span>${chg > 0 ? "▲" : chg < 0 ? "▼" : ""} ${round(Math.abs(chg), 1)} lb</span>`,
+      detail: `average of first 5 weigh-ins ${round(wA, 1)} → last 5 ${round(wB, 1)} lb · ${wt.length} weigh-ins · ${round(wt.at(-1).weight - T.weightGoal, 1)} lb from goal`,
+      action: chg > allow ? "Weight is creeping up; bring net calories back to maintenance." : chg < -allow ? `Dropping faster than a build phase wants, and you're already ${round(wt.at(-1).weight - T.weightGoal, 1)} lb from goal. Hold here: eat a little more on big training days.` : "Holding steady, which is what a build phase wants." });
+
+    // 5. Training volume
+    const wo = W(d.workouts), wop = PW(d.workouts);
+    const hrs = sum(wo.map(w => w.min)) / 60 / weeks, hrsPrev = wop ? sum(wop.map(w => w.min)) / 60 / weeks : null;
+    add({ key: "training", name: "Training volume", more: true, prio: 5,
+      status: hrs >= 5 ? "green" : hrs >= 3 ? "amber" : "red",
+      value: `${round(hrs, 1)} h/week`, target: "5+ h/week", trend: trend(hrs, hrsPrev, 1, " h", true),
+      detail: `${wo.length} sessions on ${new Set(wo.map(w => w.date)).size} days · ${round(sum(wo.map(w => w.kcal)))} kcal`,
+      action: "Keep the weekly rhythm; it's your strongest habit." });
+
+    // 6. Run volume for the next marathon
+    const runs = wo.filter(w => w.sport === "Run"), runMi = sum(runs.map(w => w.mi)), runWk = runMi / weeks;
+    const runTarget = wksToRace == null ? 15 : wksToRace > 16 ? 15 : wksToRace > 8 ? 25 : 30;
+    const longest = runs.reduce((a, b) => (b.min || 0) > (a?.min || 0) ? b : a, null);
+    if (bigSur) add({ key: "run", name: `Run volume (${bigSur.name.replace(/ Marathon$/i, "")})`, more: true, prio: 3,
+      status: runWk >= runTarget ? "green" : runWk >= 0.6 * runTarget ? "amber" : "red",
+      value: `${round(runWk, 1)} mi/week`, target: `${runTarget}+ mi/week now`,
+      trend: "", detail: `${runs.length} runs, ${round(runMi, 1)} mi in ${N} days · longest ${longest ? `${hhmm(longest.min)} (${fmtDay(longest.date)})` : "–"} · ${wksToRace} weeks to race day`,
+      action: `Add one easy run a week and a Sunday long run, building toward ${runTarget} mi/week. Swims and rides count for the 70.3, but the marathon needs miles on your feet.` });
+
+    // 7. Strength
+    const str = wo.filter(w => w.sport === "Strength"), perWk = str.length / weeks;
+    add({ key: "strength", name: "Strength sessions", more: true, prio: 4,
+      status: perWk >= 2 ? "green" : perWk >= 1 ? "amber" : "red",
+      value: `${round(perWk, 1)}/week`, target: "2+/week (Coach M plan)", trend: "",
+      detail: `${str.length} sessions in ${N} days`,
+      action: "Lock in two Coach M strength days a week; that's what builds lean mass in Phase 1." });
+
+    // 8. Steps
+    const st = W(d.steps); const stAvg = avg(st.map(x => x.steps)), stp = P(d.steps), stPrev = stp && avg(stp.map(x => x.steps));
+    const notes = [];
+    if (st.length && st.length < 0.5 * N) notes.push(`Steps left out: only ${st.length} of ${N} days are in the sheet so far (latest ${fmtDay(st.at(-1).date)}).`);
+    if (st.length >= 0.5 * N) add({ key: "steps", name: "Steps", more: true, prio: 7,
+      status: stAvg >= T.steps ? "green" : stAvg >= 7500 ? "amber" : "red",
+      value: round(stAvg), target: T.steps.toLocaleString(), trend: trend(stAvg, stPrev, 0, "", true),
+      detail: `${st.filter(x => x.steps >= T.steps).length} of ${st.length} days ≥ ${T.steps.toLocaleString()} · latest ${fmtDay(st.at(-1).date)}`,
+      action: "Add a 15-minute walk after dinner on rest days." });
+
+    // 9. Blood pressure
+    const bp = W(d.bp);
+    if (bp.length) { const bs = avg(bp.map(x => x.sys)), bd = avg(bp.map(x => x.dia)), c = bpCat(bs, bd);
+      add({ key: "bp", name: "Blood pressure", more: false, prio: 8,
+        status: c.key === "Normal" ? "green" : c.key === "Elevated" || c.key === "Stage 1" ? "amber" : "red",
+        value: bpText(bs, bd), target: "under 120/80", trend: "",
+        detail: `${c.key} on average · ${bp.length} reading days · latest ${bpText(bp.at(-1).sys, bp.at(-1).dia)} on ${fmtDay(bp.at(-1).date)} · ${bp.filter(x => x.sys >= 140 || x.dia >= 90).length} days at 140/90+`,
+        action: "Keep measuring a few mornings a week; share the BP page with your doctor at your next visit." }); }
+
+    // 10. Late-night eating
+    const items = W(d.foodItems), nightK = sum(items.filter(i => i.meal === "night").map(i => i.kcal)), totK = sum(items.map(i => i.kcal));
+    if (totK) { const share = nightK / totK * 100;
+      add({ key: "night", name: "Late-night eating", more: false, prio: 5,
+        status: share <= 5 ? "green" : share <= 10 ? "amber" : "red",
+        value: `${round(share)}%`, target: "under 5% of calories", trend: "",
+        detail: `${round(nightK)} kcal across ${new Set(items.filter(i => i.meal === "night").map(i => i.date)).size} nights`,
+        action: "Kitchen closes at 9 PM; it helps both sleep and calories." }); }
+
+    rows.forEach(r => r.bucket = r.status === "green" ? "Keep" : r.status === "amber" ? "Improve" : r.more ? "Accelerate" : "Ease off");
+    const rank = { red: 0, amber: 1, green: 2 };
+    const top = rows.filter(r => r.status !== "green").sort((a, b) => rank[a.status] - rank[b.status] || a.prio - b.prio).slice(0, 3);
+    const bucketOrder = ["Accelerate", "Improve", "Ease off", "Keep"];
+
+    // cross-links (use all Garmin-era data so there are enough nights)
+    const minsBy = {}; for (const w of d.workouts) minsBy[w.date] = (minsBy[w.date] || 0) + (w.min || 0);
+    const firstW = d.workouts[0]?.date;
+    const nights = d.sleep.filter(s => firstW && s.date >= firstW && s.date < end);
+    const shortN = nights.filter(s => s.sleepMin < 360), goodN = nights.filter(s => s.sleepMin >= 390);
+    const after = list => avg(list.map(s => minsBy[s.date] || 0));
+    const shortMin = after(shortN), goodMin = after(goodN);
+    const surplus = sum(nu.map(x => x.kcal - (x.burn || 0) - T.kcal));
+    const expect = surplus / 3500;
+
+    const pill = s => `<span class="rag ${s}"><b>${STATUS[s].icon}</b>${STATUS[s].label}</span>`;
+    $("#page-insights").innerHTML = `<h2>Insights</h2>
+    <p class="sub">${state.days ? `Last ${N} days (${fmtDay(start)} – ${fmtDay(end)})` : `Last 30 days (pick 7d / 90d / 1y above to change)`}, compared with the period before where there's enough data. ${goalTxt ? `Goal: ${esc(goalTxt)}.` : ""} ${bigSur ? `Next race: <b>${esc(bigSur.name)}</b>, ${fmtLong(bigSur.date)} (${wksToRace} weeks).` : ""}</p>
+    <div class="grid">
+      ${card("c12", "Top 3 actions", "What would move the needle most right now", top.length ? `<ol class="actions">${top.map(r => `<li>${pill(r.status)} <b>${esc(r.name)}:</b> ${r.action}</li>`).join("")}</ol>` : "<p>Everything is on track. Keep doing what you're doing.</p>")}
+    </div>
+    <div class="grid">
+      ${card("c12", "Scorecard", "Green = keep, amber = improve, red = accelerate or ease off", `<div class="table-wrap"><table class="scorecard"><thead><tr><th>Status</th><th>Metric</th><th class="n">Now</th><th>Target</th><th>vs before</th><th>Do</th><th>Detail</th></tr></thead><tbody>
+        ${rows.slice().sort((a, b) => bucketOrder.indexOf(a.bucket) - bucketOrder.indexOf(b.bucket) || a.prio - b.prio).map(r => `<tr><td>${pill(r.status)}</td><td><b>${esc(r.name)}</b></td><td class="n">${r.value}</td><td>${esc(r.target)}</td><td>${r.trend || "–"}</td><td><span class="pill">${r.bucket}</span></td><td class="wrap">${r.detail}</td></tr>`).join("")}
+      </tbody></table></div>`)}
+    </div>
+    ${notes.length ? `<p class="sub">${notes.join(" ")}</p>` : ""}
+    <div class="grid">
+      ${card("c6", "Sleep → training", `${nights.length} nights since ${firstW ? fmtDay(firstW) : "–"}`, shortN.length >= 3 && goodN.length >= 3 ? `<p class="big">After short nights (under 6 h) you trained <b>${round(shortMin)} min</b> the next day on average, vs <b>${round(goodMin)} min</b> after 6½ h or more.</p><p class="sub">${shortN.length} short nights, ${goodN.length} longer nights. ${goodMin > shortMin ? "More sleep goes with more training." : "Training holds up even after short nights, but recovery and strength still pay the price."}</p>` : `<p class="sub">Not enough nights yet.</p>`)}
+      ${card("c6", "Calories → weight", rangeLabel(), chg != null && nu.length ? `<p class="big">Your logged net calories add up to <b>${expect >= 0 ? "+" : ""}${round(expect, 1)} lb</b> over these ${N} days; the scale moved <b>${chg >= 0 ? "+" : ""}${round(chg, 1)} lb</b>.</p><p class="sub">${Math.abs(expect - chg) <= 1.5 ? "They roughly agree, so your food log is a good guide." : "They don't match closely; your true maintenance may differ from the 2,004 kcal plan, or some food or exercise isn't logged."} Based on 3,500 kcal ≈ 1 lb.</p>` : `<p class="sub">Not enough data yet.</p>`)}
+    </div>`;
+  }
+
   // ── History: every day since 2013 from the Health Historical Daily tab ──
   let histYears = 0; // 0 = all
   function renderHistory() {
@@ -935,7 +1090,7 @@
   let lastTracked = null;
 
   // ── shell ───────────────────────────────────────────────────
-  const PAGES = { training: renderTraining, overview: renderOverview, nutrition: renderNutrition, sleep: renderSleep, body: renderBody, bp: renderBP, history: renderHistory, races: renderRaces };
+  const PAGES = { training: renderTraining, insights: renderInsights, overview: renderOverview, nutrition: renderNutrition, sleep: renderSleep, body: renderBody, bp: renderBP, history: renderHistory, races: renderRaces };
 
   function render() {
     state.charts.forEach(c => c.destroy()); state.charts = []; clearInterval(hlTimer);
