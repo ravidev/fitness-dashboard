@@ -5,7 +5,6 @@ A static website that turns the **Ravi Fitness – Sleep, Workouts & Food** Goog
 | Page | What it shows |
 |---|---|
 | **Training** | Highlights carousel (animated swim/bike/run cards, photos from `data/photos.json` when added), then Weekly hours by sport, sport mix, activity calendar, totals, filterable workout log |
-| **Insights** | The so-what layer: top 3 actions, red/amber/green scorecard (sleep, protein, calories, weight, training, run volume for the next marathon, strength, steps, BP, late-night eating) with Keep / Improve / Accelerate / Ease off, plus sleep→training and calories→weight links |
 | **Overview** | This week vs last week (sleep, score, protein, intake, training, weight), auto-generated insights, race countdowns |
 | **Nutrition** | Calories vs FITTR target, protein vs 140 g, macro split, calories by time of day, weekly averages, top foods |
 | **Sleep** | Time asleep vs 7 h, stages, score labels, HRV trend, bedtime vs score, nightly table |
@@ -13,6 +12,7 @@ A static website that turns the **Ravi Fitness – Sleep, Workouts & Food** Goog
 | **BP** | Blood pressure from *Health Historical Daily* (2021–): average and AHA category, trend vs 130/80, days per category, year by year, weight vs BP |
 | **History** | Every day since 2013 from *Health Historical Daily*: monthly weight, steps and sleep, long-term patterns, year-by-year table |
 | **Races** | Upcoming races with countdown, completed per year, full history |
+| **Insights** | The so-what layer: top 3 actions, red/amber/green scorecard (sleep, protein, calories, weight, training, run volume for the next marathon, strength, steps, BP, late-night eating) with Keep / Improve / Accelerate / Ease off, plus sleep→training and calories→weight links |
 
 Every page has a 7d / 30d / 90d / All range, dark mode, and sortable tables. No build step: plain HTML, CSS and JavaScript ([Chart.js](https://www.chartjs.org/) + [PapaParse](https://www.papaparse.com/) from a CDN).
 

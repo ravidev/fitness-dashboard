@@ -1090,7 +1090,7 @@
   let lastTracked = null;
 
   // ── shell ───────────────────────────────────────────────────
-  const PAGES = { training: renderTraining, insights: renderInsights, overview: renderOverview, nutrition: renderNutrition, sleep: renderSleep, body: renderBody, bp: renderBP, history: renderHistory, races: renderRaces };
+  const PAGES = { training: renderTraining, overview: renderOverview, nutrition: renderNutrition, sleep: renderSleep, body: renderBody, bp: renderBP, history: renderHistory, races: renderRaces, insights: renderInsights };
 
   function render() {
     state.charts.forEach(c => c.destroy()); state.charts = []; clearInterval(hlTimer);
