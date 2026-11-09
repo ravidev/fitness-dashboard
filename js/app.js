@@ -456,6 +456,13 @@
     hlTimer = setInterval(() => { if (playing && !hover && document.visibilityState === "visible" && $("#hl-row") === row) go(idx + 1); }, 5000);
   }
 
+  // weeks in the selected range that the workout log actually covers (used everywhere for "per week")
+  function perWeekSpan() {
+    const d = state.data, end = lastDate(), wFirst = d.workouts[0]?.date || end;
+    const startOf = state.days ? iso(addDays(parse(end), -(state.days - 1))) : wFirst;
+    return Math.max(1, daysBetween(parse(wFirst > startOf ? wFirst : startOf), parse(end)) + 1) / 7;
+  }
+
   function renderTraining() {
     const d = state.data, wo = inRange(d.workouts);
     const bySport = Object.fromEntries(SPORTS.map(s => [s, wo.filter(w => w.sport === s)]));
@@ -463,7 +470,8 @@
     const totals = s => ({ n: bySport[s].length, min: sum(bySport[s].map(w => w.min)), mi: sum(bySport[s].map(w => w.mi)), kcal: sum(bySport[s].map(w => w.kcal)) });
     // weeks
     const weeks = [...new Set(wo.map(w => weekStart(w.date)))].sort();
-    const rowsFor = () => trainFilter === "All" ? wo : wo.filter(w => w.sport === trainFilter);
+    const woAll = inRange(d.allWorkouts), skipped = woAll.filter(w => !w.counted);
+    const rowsFor = () => trainFilter === "All" ? woAll : woAll.filter(w => w.sport === trainFilter);
 
     let hlList = wo.filter(w => ["Swim", "Bike", "Run"].includes(w.sport)).slice().reverse().slice(0, 12);
     const hlFallback = !hlList.length;
@@ -472,10 +480,11 @@
     ${hlList.length ? `<div class="grid">${card("c12", "Highlights", `${hlFallback ? "Latest swims, rides and runs (none in " + rangeLabel() + ")" : `Swims, rides and runs · ${rangeLabel()}`} · auto-plays, swipe or use the arrows`, highlights(hlList))}</div>` : ""}
     <div class="grid">
       ${tile("Sessions", wo.length, "", `${new Set(wo.map(w => w.date)).size} active days · ${rangeLabel()}`)}
-      ${tile("Time", round(sum(wo.map(w => w.min)) / 60, 1), "h", `${round(sum(wo.map(w => w.min)) / 60 / Math.max(1, weeks.length), 1)} h per week`)}
-      ${tile("Activity burn", round(sum(wo.map(w => w.kcal))), "kcal", `${wo.filter(w => w.estimated).length} sessions estimated, rest from watch`)}
+      ${tile("Time", round(sum(wo.map(w => w.min)) / 60, 1), "h", `${round(sum(wo.map(w => w.min)) / 60 / perWeekSpan(), 1)} h per week`)}
+      ${tile("Activity burn", round(sum(wo.map(w => w.kcal))), "kcal", `${wo.filter(w => w.estimated).length} of ${wo.length} sessions estimated, rest from watch`)}
       ${tile("Swim · Bike · Run", `${round(totals("Swim").mi, 1)} · ${round(totals("Bike").mi)} · ${round(totals("Run").mi, 1)}`, "mi", "distance logged")}
     </div>
+    <p class="sub">Counting rule: every logged workout counts except chores and recovery (household tasks, sauna/hot tub)${skipped.length ? ` — ${skipped.length} such ${skipped.length === 1 ? "entry" : "entries"} in this range, shown in the log as "not counted"` : ""}. Per-week figures divide by the days in the range that the log covers.</p>
     <div class="grid">
       ${card("c8", "Weekly training hours by sport", "Mon–Sun weeks", canvas("tr-week", "tall"))}
       ${card("c4", "Mix by sport", "Hours", canvas("tr-mix", "tall"))}
@@ -493,7 +502,7 @@
     const drawLog = () => {
       $("#tr-log").innerHTML = sortableTable("tr-log-t", [
         { key: "date", label: "Date", fmt: v => fmtLong(v) },
-        { key: "sport", label: "Sport", fmt: (v, r) => `<span class="swatch" style="background:${sportColor(v)}"></span>${esc(r.type)}${r.race ? ' <span class="pill">race</span>' : ""}` },
+        { key: "sport", label: "Sport", fmt: (v, r) => `<span class="swatch" style="background:${sportColor(v)}"></span>${esc(r.type)}${r.race ? ' <span class="pill">race</span>' : ""}${r.counted ? "" : ' <span class="pill" title="Chores and recovery are logged but not counted as training">not counted</span>'}` },
         { key: "desc", label: "Description", cls: "wrap" },
         { key: "min", label: "Time", num: 1, fmt: v => v ? hhmm(v) : "–" },
         { key: "mi", label: "Miles", num: 1, fmt: v => v ? round(v, 2) : "–" },
@@ -788,7 +797,8 @@
     const start = iso(addDays(endD, -(N - 1))), prevEnd = iso(addDays(endD, -N));
     const W = list => window_(list, end, N), P = list => { const w = window_(list, prevEnd, N); return w.length >= 0.7 * N ? w : null; };
     const PW = list => list.length && list[0].date <= iso(addDays(endD, -(2 * N - 1))) ? window_(list, prevEnd, N) : null; // event logs (workouts)
-    const weeks = N / 7;
+    const wFirst0 = d.workouts[0]?.date || end;
+    const weeks = (daysBetween(parse(wFirst0 > start ? wFirst0 : start), endD) + 1) / 7; // same per-week rule as Overview/Training
     const goalTxt = d.summary["Goal"] || "";
     const races = d.races.filter(r => r.d >= today() && r.registered && !r.considering);
     const bigSur = races.find(r => /big sur/i.test(r.name)) || races[0];
@@ -885,7 +895,7 @@
       add({ key: "bp", name: "Blood pressure", more: false, prio: 8,
         status: c.key === "Normal" ? "green" : c.key === "Elevated" || c.key === "Stage 1" ? "amber" : "red",
         value: bpText(bs, bd), target: "under 120/80", trend: "",
-        detail: `${c.key} on average · ${bp.length} reading days · latest ${bpText(bp.at(-1).sys, bp.at(-1).dia)} on ${fmtDay(bp.at(-1).date)} · ${bp.filter(x => x.sys >= 140 || x.dia >= 90).length} days at 140/90+`,
+        detail: `${c.key} on average · ${bp.filter(x => bpCat(x.sys, x.dia).key === "Normal").length} of ${bp.length} reading days in the Normal range · latest ${bpText(bp.at(-1).sys, bp.at(-1).dia)} on ${fmtDay(bp.at(-1).date)} · ${bp.filter(x => x.sys >= 140 || x.dia >= 90).length} days at 140/90+`,
         action: "Keep measuring a few mornings a week; share the BP page with your doctor at your next visit." }); }
 
     // 10. Late-night eating
@@ -1113,6 +1123,9 @@
       ? `<span class="dot" style="background:var(--good)"></span>Live from Google Sheet`
       : live ? `<span class="dot" style="background:var(--warn)"></span>${live}/${src.length} tabs live, rest from snapshot`
       : `<span class="dot" style="background:var(--muted)"></span>Snapshot · data through ${fmtLong(lastDate())}`;
+    const lastOf = l => l.length ? fmtDay(l.at(-1).date) : "–", D0 = state.data;
+    $("#source").title = `Latest per source — sleep ${lastOf(D0.sleep)}, food ${lastOf(D0.nutrition)}, workouts ${lastOf(D0.workouts)}, weight ${lastOf(D0.weights)}, steps ${lastOf(D0.steps)}, BP ${lastOf(D0.bp)}`;
+    $("#source").innerHTML += ` <span class="fresh">· weight ${lastOf(D0.weights)} · steps ${lastOf(D0.steps)} · BP ${lastOf(D0.bp)}</span>`;
     $("#foot-note").textContent = `Data through ${fmtLong(lastDate())}. Food values are estimates; * = estimated workout calories.`;
     render();
   }

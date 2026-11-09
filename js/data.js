@@ -281,7 +281,8 @@
         sources,
         summary: parseSummary(raw.summary.rows),
         sleep, sleepHistory, steps, bp, photos,
-        workouts: parseWorkouts(raw.workouts.rows),
+        // Counting rule: chores and recovery (household tasks, sauna/hot tub) stay in the log but aren't training
+        ...(() => { const all = parseWorkouts(raw.workouts.rows); all.forEach(w => w.counted = !(/household|recovery|chores/i.test(w.type) || /sauna|hot tub|household|chores/i.test(w.desc || ""))); return { workouts: all.filter(w => w.counted), allWorkouts: all }; })(),
         nutrition: Object.values(food.days).sort((a, b) => a.date.localeCompare(b.date)),
         foodItems: food.items,
         weights,
