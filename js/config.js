@@ -17,8 +17,7 @@ window.FD_CONFIG = {
   goatcounter: "ravifitness",
 
   // Festive banner at the top of every page (inclusive local dates). null = off.
-  // youtube: optional video ID; adds a "Play song" button that opens YouTube's own player (never autoplays on load)
-  festive: { id: "diwali-2026", start: "2026-11-08", end: "2026-11-15", youtube: "q1B_LaxzS7U" },
+  festive: { id: "diwali-2026", start: "2026-11-08", end: "2026-11-15" },
 
   // Your sheet (used for the "Open sheet" link only)
   sheetUrl: "https://docs.google.com/spreadsheets/d/1MLtoN2pkTAJv7D6osOBqUXlF9D48U0sztjvwiLI9e3Q/edit",

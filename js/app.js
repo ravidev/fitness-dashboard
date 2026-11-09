@@ -971,19 +971,6 @@
     el.hidden = false;
     // "×" hides it for this visit only; it shows again on every new visit during the festive week
     $("#festive-close").onclick = () => { el.hidden = true; };
-    if (f.youtube) {
-      const btn = $("#festive-song"), box = $("#song-player"), frame = $("#song-frame");
-      const id = encodeURIComponent(f.youtube);
-      btn.hidden = false;
-      $("#song-link").href = `https://www.youtube.com/shorts/${id}`;
-      const close = () => { box.hidden = true; frame.innerHTML = ""; btn.textContent = "🎵 Play Diwali song"; };
-      btn.onclick = () => {
-        if (!box.hidden) return close();
-        frame.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&playsinline=1&rel=0" title="Diwali song" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
-        box.hidden = false; btn.textContent = "■ Stop song";
-      };
-      $("#song-close").onclick = close;
-    }
   })();
 
   // theme
