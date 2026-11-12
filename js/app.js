@@ -421,7 +421,7 @@
     const photos = state.data.photos || [];
     const cards = list.map(w => {
       const ph = photos.filter(p => p.date === w.date && (!p.sport || p.sport === w.sport));
-      const bg = ph.length ? `<div class="scn photo">${ph.map((p, i) => `<img src="${esc(p.src)}" alt="" loading="lazy"${i ? "" : ' class="on"'}>`).join("")}${ph.length > 1 ? `<span class="ph-n">📷 ${ph.length}</span>` : ""}</div>` : SCENES[w.sport];
+      const bg = ph.length ? `<div class="scn photo">${ph.map((p, i) => `<img src="${esc(p.src)}" alt="" loading="lazy"${i ? "" : ' class="on"'}>`).join("")}${ph.length > 1 ? `<span class="ph-n">📷 ${ph.length}</span>` : ""}</div>${SCENES[w.sport].replace('class="scn ', 'class="scn ovl ')}` : SCENES[w.sport];
       const stats = [w.mi ? `${round(w.mi, w.sport === "Bike" ? 1 : 2)} mi` : "", w.min ? (w.min < 60 ? `${Math.round(w.min)} min` : hhmm(w.min)) : "", pace(w), w.hr ? `${w.hr} bpm` : "", w.kcal ? `${round(w.kcal)} kcal` : ""].filter(Boolean);
       return `<article class="hl ${w.sport.toLowerCase()}">${bg}
         <div class="hl-body">
