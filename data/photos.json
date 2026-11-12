@@ -1,1 +1,62 @@
-[]
+[
+ {
+  "date": "2026-11-12",
+  "sport": "Bike",
+  "src": "photos/2026-11-12-bike-1.jpg"
+ },
+ {
+  "date": "2026-11-07",
+  "sport": "Bike",
+  "src": "photos/2026-11-07-bike-1.jpg"
+ },
+ {
+  "date": "2026-11-01",
+  "sport": "Run",
+  "src": "photos/2026-11-01-run-1.jpg"
+ },
+ {
+  "date": "2026-10-31",
+  "sport": "Swim",
+  "src": "photos/2026-10-31-swim-1.jpg"
+ },
+ {
+  "date": "2026-10-24",
+  "sport": "Run",
+  "src": "photos/2026-10-24-run-4.jpg"
+ },
+ {
+  "date": "2026-10-24",
+  "sport": "Run",
+  "src": "photos/2026-10-24-run-3.jpg"
+ },
+ {
+  "date": "2026-10-24",
+  "sport": "Run",
+  "src": "photos/2026-10-24-run-2.jpg"
+ },
+ {
+  "date": "2026-10-24",
+  "sport": "Run",
+  "src": "photos/2026-10-24-run-1.jpg"
+ },
+ {
+  "date": "2026-10-03",
+  "sport": "Swim",
+  "src": "photos/2026-10-03-swim-2.jpg"
+ },
+ {
+  "date": "2026-10-03",
+  "sport": "Swim",
+  "src": "photos/2026-10-03-swim-1.jpg"
+ },
+ {
+  "date": "2026-09-27",
+  "sport": "Run",
+  "src": "photos/2026-09-27-run-2.jpg"
+ },
+ {
+  "date": "2026-09-27",
+  "sport": "Run",
+  "src": "photos/2026-09-27-run-1.jpg"
+ }
+]

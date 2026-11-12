@@ -420,8 +420,8 @@
   function highlights(list) {
     const photos = state.data.photos || [];
     const cards = list.map(w => {
-      const ph = photos.find(p => p.date === w.date && (!p.sport || p.sport === w.sport));
-      const bg = ph ? `<div class="scn photo"><img src="${esc(ph.src)}" alt="" loading="lazy"></div>` : SCENES[w.sport];
+      const ph = photos.filter(p => p.date === w.date && (!p.sport || p.sport === w.sport));
+      const bg = ph.length ? `<div class="scn photo">${ph.map((p, i) => `<img src="${esc(p.src)}" alt="" loading="lazy"${i ? "" : ' class="on"'}>`).join("")}${ph.length > 1 ? `<span class="ph-n">📷 ${ph.length}</span>` : ""}</div>` : SCENES[w.sport];
       const stats = [w.mi ? `${round(w.mi, w.sport === "Bike" ? 1 : 2)} mi` : "", w.min ? (w.min < 60 ? `${Math.round(w.min)} min` : hhmm(w.min)) : "", pace(w), w.hr ? `${w.hr} bpm` : "", w.kcal ? `${round(w.kcal)} kcal` : ""].filter(Boolean);
       return `<article class="hl ${w.sport.toLowerCase()}">${bg}
         <div class="hl-body">
@@ -434,7 +434,7 @@
     return `<div class="hl-wrap"><div class="hl-row" id="hl-row" tabindex="0" aria-label="Workout highlights">${cards}</div>
       <div class="hl-nav"><button class="chip" id="hl-prev" aria-label="Previous highlight">◀</button><span id="hl-dots"></span><button class="chip" id="hl-next" aria-label="Next highlight">▶</button><button class="chip" id="hl-play" aria-label="Pause auto-play">❚❚ Pause</button></div></div>`;
   }
-  let hlTimer = null;
+  let hlTimer = null, phTimer = null;
   function startHighlights() {
     clearInterval(hlTimer);
     const row = $("#hl-row"); if (!row) return;
@@ -454,6 +454,16 @@
     row.addEventListener("touchstart", () => { playing = false; label(); }, { passive: true });
     label(); mark();
     hlTimer = setInterval(() => { if (playing && !hover && document.visibilityState === "visible" && $("#hl-row") === row) go(idx + 1); }, 5000);
+    // cards with several photos cross-fade through them
+    clearInterval(phTimer);
+    phTimer = setInterval(() => {
+      if (!document.body.contains(row) || document.visibilityState !== "visible") return;
+      row.querySelectorAll(".scn.photo").forEach(s => {
+        const imgs = s.querySelectorAll("img"); if (imgs.length < 2) return;
+        const i = [...imgs].findIndex(im => im.classList.contains("on"));
+        imgs[i].classList.remove("on"); imgs[(i + 1) % imgs.length].classList.add("on");
+      });
+    }, 2500);
   }
 
   // weeks in the selected range that the workout log actually covers (used everywhere for "per week")
@@ -473,7 +483,10 @@
     const woAll = inRange(d.allWorkouts), skipped = woAll.filter(w => !w.counted);
     const rowsFor = () => trainFilter === "All" ? woAll : woAll.filter(w => w.sport === trainFilter);
 
-    let hlList = wo.filter(w => ["Swim", "Bike", "Run"].includes(w.sport)).slice().reverse().slice(0, 12);
+    const sbr = wo.filter(w => ["Swim", "Bike", "Run"].includes(w.sport)).slice().reverse();
+    const hasPhoto = w => (d.photos || []).some(p => p.date === w.date && (!p.sport || p.sport === w.sport));
+    // latest 12, plus any older ones in range that have photos
+    let hlList = sbr.filter((w, i) => i < 12 || hasPhoto(w));
     const hlFallback = !hlList.length;
     if (hlFallback) hlList = d.workouts.filter(w => ["Swim", "Bike", "Run"].includes(w.sport)).slice(-6).reverse();
     $("#page-training").innerHTML = `<h2>Training</h2>
