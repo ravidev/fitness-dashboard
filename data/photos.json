@@ -2,17 +2,62 @@
  {
   "date": "2026-11-12",
   "sport": "Bike",
-  "src": "photos/2026-11-12-bike-1.jpg"
+  "src": "photos/2026-11-12-ride-1.jpg"
+ },
+ {
+  "date": "2026-11-12",
+  "sport": "Bike",
+  "src": "photos/2026-11-12-ride-2.jpg"
+ },
+ {
+  "date": "2026-11-12",
+  "sport": "Bike",
+  "src": "photos/2026-11-12-ride-3.jpg"
+ },
+ {
+  "date": "2026-11-12",
+  "sport": "Bike",
+  "src": "photos/2026-11-12-ride-4.jpg"
+ },
+ {
+  "date": "2026-11-12",
+  "sport": "Bike",
+  "src": "photos/2026-11-12-ride-5.jpg"
  },
  {
   "date": "2026-11-07",
   "sport": "Bike",
-  "src": "photos/2026-11-07-bike-1.jpg"
+  "src": "photos/2026-11-07-ride-1.jpg"
+ },
+ {
+  "date": "2026-11-07",
+  "sport": "Bike",
+  "src": "photos/2026-11-07-ride-2.jpg"
+ },
+ {
+  "date": "2026-11-07",
+  "sport": "Bike",
+  "src": "photos/2026-11-07-ride-3.jpg"
+ },
+ {
+  "date": "2026-11-07",
+  "sport": "Bike",
+  "src": "photos/2026-11-07-ride-4.jpg"
+ },
+ {
+  "date": "2026-11-07",
+  "sport": "Bike",
+  "src": "photos/2026-11-07-ride-5.jpg"
+ },
+ {
+  "date": "2026-11-07",
+  "sport": "Bike",
+  "src": "photos/2026-11-07-ride-6.jpg"
  },
  {
   "date": "2026-11-01",
   "sport": "Run",
-  "src": "photos/2026-11-01-run-1.jpg"
+  "src": "photos/2026-11-01-run-2.jpg"
  },
  {
   "date": "2026-10-31",
@@ -20,14 +65,49 @@
   "src": "photos/2026-10-31-swim-1.jpg"
  },
  {
-  "date": "2026-10-24",
-  "sport": "Run",
-  "src": "photos/2026-10-24-run-4.jpg"
+  "date": "2026-10-31",
+  "sport": "Swim",
+  "src": "photos/2026-10-31-swim-2.jpg"
+ },
+ {
+  "date": "2026-10-31",
+  "sport": "Swim",
+  "src": "photos/2026-10-31-swim-3.jpg"
+ },
+ {
+  "date": "2026-10-31",
+  "sport": "Swim",
+  "src": "photos/2026-10-31-swim-4.jpg"
+ },
+ {
+  "date": "2026-10-31",
+  "sport": "Swim",
+  "src": "photos/2026-10-31-swim-5.jpg"
+ },
+ {
+  "date": "2026-10-31",
+  "sport": "Swim",
+  "src": "photos/2026-10-31-swim-6.jpg"
+ },
+ {
+  "date": "2026-10-31",
+  "sport": "Swim",
+  "src": "photos/2026-10-31-swim-7.jpg"
+ },
+ {
+  "date": "2026-10-29",
+  "sport": "Bike",
+  "src": "photos/2026-10-29-ride-1.jpg"
+ },
+ {
+  "date": "2026-10-29",
+  "sport": "Bike",
+  "src": "photos/2026-10-29-ride-2.jpg"
  },
  {
   "date": "2026-10-24",
   "sport": "Run",
-  "src": "photos/2026-10-24-run-3.jpg"
+  "src": "photos/2026-10-24-run-1.jpg"
  },
  {
   "date": "2026-10-24",
@@ -37,7 +117,57 @@
  {
   "date": "2026-10-24",
   "sport": "Run",
-  "src": "photos/2026-10-24-run-1.jpg"
+  "src": "photos/2026-10-24-run-3.jpg"
+ },
+ {
+  "date": "2026-10-24",
+  "sport": "Run",
+  "src": "photos/2026-10-24-run-4.jpg"
+ },
+ {
+  "date": "2026-10-24",
+  "sport": "Run",
+  "src": "photos/2026-10-24-run-5.jpg"
+ },
+ {
+  "date": "2026-10-24",
+  "sport": "Run",
+  "src": "photos/2026-10-24-run-6.jpg"
+ },
+ {
+  "date": "2026-10-24",
+  "sport": "Run",
+  "src": "photos/2026-10-24-run-7.jpg"
+ },
+ {
+  "date": "2026-10-24",
+  "sport": "Run",
+  "src": "photos/2026-10-24-run-8.jpg"
+ },
+ {
+  "date": "2026-10-18",
+  "sport": "Swim",
+  "src": "photos/2026-10-18-swim-1.jpg"
+ },
+ {
+  "date": "2026-10-18",
+  "sport": "Swim",
+  "src": "photos/2026-10-18-swim-2.jpg"
+ },
+ {
+  "date": "2026-10-10",
+  "sport": "Bike",
+  "src": "photos/2026-10-10-ride-1.jpg"
+ },
+ {
+  "date": "2026-10-10",
+  "sport": "Bike",
+  "src": "photos/2026-10-10-ride-2.jpg"
+ },
+ {
+  "date": "2026-10-03",
+  "sport": "Swim",
+  "src": "photos/2026-10-03-swim-1.jpg"
  },
  {
   "date": "2026-10-03",
@@ -47,7 +177,27 @@
  {
   "date": "2026-10-03",
   "sport": "Swim",
-  "src": "photos/2026-10-03-swim-1.jpg"
+  "src": "photos/2026-10-03-swim-3.jpg"
+ },
+ {
+  "date": "2026-10-03",
+  "sport": "Swim",
+  "src": "photos/2026-10-03-swim-4.jpg"
+ },
+ {
+  "date": "2026-10-03",
+  "sport": "Swim",
+  "src": "photos/2026-10-03-swim-5.jpg"
+ },
+ {
+  "date": "2026-09-27",
+  "sport": "Bike",
+  "src": "photos/2026-09-27-ride-1.jpg"
+ },
+ {
+  "date": "2026-09-27",
+  "sport": "Run",
+  "src": "photos/2026-09-27-run-1.jpg"
  },
  {
   "date": "2026-09-27",
@@ -57,6 +207,11 @@
  {
   "date": "2026-09-27",
   "sport": "Run",
-  "src": "photos/2026-09-27-run-1.jpg"
+  "src": "photos/2026-09-27-run-3.jpg"
+ },
+ {
+  "date": "2026-09-26",
+  "sport": "Swim",
+  "src": "photos/2026-09-26-swim-1.jpg"
  }
 ]
