@@ -256,7 +256,8 @@ tr.done td:first-child { box-shadow: inset 3px 0 0 var(--good); }
 .scn.ovl .wave { opacity: .7; }
 .scn.ovl .bub { border-color: rgba(255,255,255,.85); box-shadow: 0 0 4px rgba(0,0,0,.25); }
 .scn.ovl.bike::after, .scn.ovl.run::after { content: ""; position: absolute; left: 0; bottom: 0; width: 200%; height: 3px; animation: slide 1.2s linear infinite; }
-.scn.ovl.bike::after { background: repeating-linear-gradient(90deg, #ffd36b 0 22px, transparent 22px 44px); }
+.scn.ovl.bike::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 16%; background: linear-gradient(rgba(40,26,22,.15), rgba(40,26,22,.55)); }
+.scn.ovl.bike::after { bottom: 7%; height: 4px; border-radius: 2px; background: repeating-linear-gradient(90deg, #ffd36b 0 22px, transparent 22px 44px); box-shadow: 0 0 6px rgba(255,211,107,.35); }
 .scn.ovl.run::after { background: repeating-linear-gradient(90deg, rgba(255,255,255,.9) 0 16px, transparent 16px 34px); animation-duration: 1s; }
 @keyframes kb { from { transform: scale(1) translate(0, 0); } to { transform: scale(1.12) translate(-3%, -2%); } }
 @media (prefers-reduced-motion: reduce) { .scn *, .scn::after, .scn .ico, .wheel, .runner { animation: none !important; } }
