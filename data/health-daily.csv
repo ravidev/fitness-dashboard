@@ -1,5 +1,10 @@
 Date,Day,Weight (lb),Steps,Distance (mi),Sleep Bedtime,Sleep Wake Time,Hours Asleep,Sleep Efficiency %,BP Systolic (mmHg),BP Diastolic (mmHg)
-"Nov 13, 2026",Fri,,,,,,,,121.0,83.0
+"Nov 18, 2026",Wed,,,,11:39 PM,7:33 AM,6.42,91.2,126.0,84.0
+"Nov 17, 2026",Tue,162.7,,,12:53 AM,5:55 AM,4.87,96.7,,
+"Nov 16, 2026",Mon,163.9,,,11:00 PM,6:48 AM,6.67,85.5,120.0,80.5
+"Nov 15, 2026",Sun,,,,1:15 AM,7:20 AM,5.48,90.1,119.0,82.0
+"Nov 14, 2026",Sat,163.9,,,11:52 PM,6:42 AM,6.45,94.4,,
+"Nov 13, 2026",Fri,161.7,,,1:03 AM,7:04 AM,5.69,94.7,121.0,83.0
 "Nov 12, 2026",Thu,163.9,,,1:32 AM,7:22 AM,5.63,98.6,,
 "Nov 11, 2026",Wed,162.6,,,10:26 PM,5:53 AM,7.20,96.5,,
 "Nov 10, 2026",Tue,162.3,,,10:09 PM,5:09 AM,6.67,95.2,121.3,84.5

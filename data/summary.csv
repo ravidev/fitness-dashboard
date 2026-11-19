@@ -1,4 +1,4 @@
-"Ravi Fitness – Food & Workouts, Sep 22–Nov 15, 2026",
+"Ravi Fitness – Food & Workouts, Sep 22–Nov 16, 2026",
 ,
 Short link: da.gd/Xtpe5,
 Name,Ravi
@@ -14,25 +14,25 @@ Upcoming races,"Big Sur Marathon, Sun Apr 25, 2027
 IRONMAN 70.3 Northern California (Redding, CA; swim Whiskeytown Lake), Sun May 23, 2027: 1.2 mi swim / 56 mi bike / 13.1 mi run. First 70.3; swim cutoff 1:10.
 2027 Sandstone IRONMAN 70.3 Santa Cruz (Santa Cruz, CA), Sun Sep 12, 2027: 1.2 mi swim / 56 mi bike / 13.1 mi run."
 ,
-"4-week stats (Oct 18–Nov 14, 2026)",
-Average daily food kcal,2503.0
-Average daily protein (g),122.0
-Days at or above 140 g protein,5
+"4-week stats (Oct 19–Nov 15, 2026)",
+Average daily food kcal,2562.0
+Average daily protein (g),123.0
+Days at or above 140 g protein,4
 Number of workouts,32
-Total activity kcal,15904
+Total activity kcal,15643
 ,
-"Sleep (Aug 9–Nov 15, Garmin Forerunner 970)",
-Nights tracked,99
+"Sleep (Aug 9–Nov 18, Garmin Forerunner 970)",
+Nights tracked,102
 Average sleep,~5h 32m
-Average score,61.6
-Score labels (FAIR / POOR / GOOD / EXCELLENT),52 FAIR / 39 POOR / 6 GOOD / 2 EXCELLENT
+Average score,61.8
+Score labels (FAIR / POOR / GOOD / EXCELLENT),55 FAIR / 39 POOR / 6 GOOD / 2 EXCELLENT
 Average overnight HRV (ms),34.5
-Average deep (min),81
+Average deep (min),82
 Average REM (min),39
 Nights ≥7h,9
 Best night,Oct 15 & Oct 12 — score 90
 Worst night,Sep 14 — score 18
-Coverage note,"Food Log/DailyStats food cover Sep 22–Sat Nov 14 (Nov 14 food so far as of 12:40 PM PT; Nov 8–11 food logged through dinner; Nov 12–13 complete). Activity calories through Sat Nov 14 are logged separately by Fitnesstracker; Nov 8, 9, 11 and 13 had no recorded activities and use Garmin active calories. Sleep is current through the Nov 15 wake date with no missing nights since Aug 9; longest verified main sleep is used when sources disagree (see Sleep notes). Garmin's Nov 4 nap (24 min) is included separately."
+Coverage note,"Food Log/DailyStats cover Sep 22–Sun Nov 15, with all days through Nov 15 complete as logged (Nov 15 is the latest logged day; food entered through the after-dinner snacks). Activity calories through Sun Nov 15 are logged separately by Fitnesstracker; Nov 9, 11 and 13 had no recorded activities and use Garmin active calories. Sleep is current through the Nov 18 wake date with no missing nights since Aug 9; longest verified main sleep is used when sources disagree (see Sleep notes). Garmin's Nov 4 nap (24 min) is included separately."
 ,
 Notes,
 ,"Food kcal/protein/carbs/fat are estimates from meal descriptions/photos (DailyFoodCalorieTracker); carbs/fat added Oct 12, 2026. Calories marked Garmin/Strava are from the watch/app; others are estimates. Workouts confirmed via Strava and food log; durations/distances missing where Strava emails didn't include them. 9/24 was a CT oral-contrast day (low intake). 10/6 food log now complete (dinner added)."
@@ -47,3 +47,4 @@ Avg actual Oct 6–12 (7 days),"2,711 kcal · 127 g protein · 348 g carbs · 91
 Avg actual Oct 12–18 (7 days),"2,954 kcal · 143 g protein · 351 g carbs · 111 g fat; avg burn 436, avg net 2,518"
 Avg actual Oct 19–25 (7 days),"2,427 kcal · 119 g protein · 316 g carbs · 82 g fat; avg burn 647, avg net 1,780"
 Avg actual Oct 26–31 (6 days; Sat 10/31 partial),"2,381 kcal · 127 g protein · 280 g carbs · 88 g fat; avg burn 590, avg net 1,792. vs FITTR: +377 kcal, +7 g protein (−13 g vs Coach M's 140), +32 g carbs, +28 g fat. Full days Oct 26–30: 2,510 kcal · 131 g P · 298 g C · 93 g F. Days ≥140 g protein: 1 (Oct 29); days at/under 2,004 kcal: 2 (Oct 27, Oct 31 so far)."
+Avg actual Nov 9–15 (7 days),"2,633 kcal · 122 g protein · 326 g carbs · 98 g fat; avg burn 557, avg net 2,076. vs FITTR: +629 kcal, +2 g protein (−18 g vs the ~140 g goal), +78 g carbs, +38 g fat. Days ≥140 g protein: 1 (Nov 10); days at/under 2,004 kcal: 0. Avg sleep (Nov 10–16 wakes): 6h 08m, score 68."

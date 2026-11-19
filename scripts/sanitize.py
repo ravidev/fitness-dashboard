@@ -3,7 +3,7 @@ The Google Sheet keeps everything; only the copies the website serves are cleane
 Usage: python3 scripts/sanitize.py data   (also run automatically by xlsx2csv.py)"""
 import csv, re, sys, os
 
-DROP_COLS = {"racelist.csv": ["Registration / Confirmation #", "Cost", "Notes"]}
+DROP_COLS = {"racelist.csv": ["Registration / Confirmation #", "Cost", "Notes", "Photos"]}
 # rows (any tab) whose text matches these are dropped; ref numbers and amounts are redacted elsewhere
 SENSITIVE = re.compile(r"\bref\s+[A-Z]{2,}\d{5,}|\bCTG\d+|\bconfirmation\s*(#|no|number)|\$\s?\d|\bpaid\b|\bbib\s*#?\s*\d", re.I)
 REDACT = [(re.compile(r"\(?\bref\s+[A-Z]{2,}\d{5,}\)?", re.I), ""), (re.compile(r"\$\s?\d[\d,]*(\.\d+)?"), "")]
