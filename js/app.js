@@ -490,6 +490,23 @@
   }
 
 
+
+  function animateWeekStrip() {
+    const el = document.querySelector(".week-strip"); if (!el) return;
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) { el.classList.add("in"); return; }
+    el.querySelectorAll(".ws-v").forEach(v => {
+      v.innerHTML = v.innerHTML.replace(/\d[\d,]*(\.\d+)?/g, m => `<span class="cu" data-to="${m.replace(/,/g, "")}" data-dec="${(m.split(".")[1] || "").length}">0</span>`);
+    });
+    requestAnimationFrame(() => el.classList.add("in"));
+    const t0 = performance.now(), dur = 1100;
+    const tick = now => {
+      const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      el.querySelectorAll(".cu").forEach(c => { const to = +c.dataset.to, dec = +c.dataset.dec; c.textContent = (to * e).toLocaleString(undefined, { minimumFractionDigits: dec, maximumFractionDigits: dec }); });
+      if (k < 1 && document.body.contains(el)) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+
   // ── "This week" strip: Mon–today vs the same days last week ─────────
   function weekStrip() {
     const d = state.data;
@@ -514,12 +531,12 @@
     const kA = avg(tw.nu.map(x => x.kcal)), lkA = avg(lw.nu.map(x => x.kcal));
     const wNow = tw.wt.at(-1)?.weight, wPrev = avg(lw.wt.map(x => x.weight));
     const bpA = tw.bp.length ? [avg(tw.bp.map(x => x.sys)), avg(tw.bp.map(x => x.dia))] : null;
-    const cell = (label, value, note, c) => `<div class="ws-cell">${dot(c)}<div class="ws-l">${label}</div><div class="ws-v">${value}</div><div class="ws-n">${note || "&nbsp;"}</div></div>`;
+    const cell = (label, value, note, c, pct) => `<div class="ws-cell">${dot(c)}<div class="ws-l">${label}</div><div class="ws-v">${value}</div><div class="ws-n">${note || "&nbsp;"}</div>${pct != null ? `<div class="ws-bar"><i class="${c}" style="--p:${Math.max(4, Math.min(100, pct))}%"></i></div>` : ""}</div>`;
     const cells = [
-      cell("Training", `${round(hrs, 1)} h · ${tw.wo.length} sessions`, sports.length ? sports.join(", ") + " · " + cmp(hrs, lhrs, " h", 1, true) : "nothing logged yet", tw.wo.length ? "g" : "a"),
-      cell("Sleep", slA ? hhmm(slA * 60) + " avg" : "–", tw.sl.length ? `${slOK} of ${tw.sl.length} nights ≥ ${T.sleepHours} h${late ? ` · ${late} after midnight` : ""}` : "", slA == null ? "" : slA >= T.sleepHours ? "g" : slA >= T.sleepHours - 0.75 ? "a" : "r"),
-      cell("Protein", pDays.length ? `${pHit} of ${pDays.length} days` : "–", pDays.length ? `hit ${T.protein} g · avg ${round(avg(pDays.map(x => x.protein)))} g` : "", !pDays.length ? "" : pHit / pDays.length >= 0.7 ? "g" : pHit / pDays.length >= 0.4 ? "a" : "r"),
-      cell("Calories", kA ? `${round(kA)} avg` : "–", kA ? `target ${round(T.kcal)} · ${cmp(kA, lkA, "", 0, null)}` : "", kA == null ? "" : Math.abs(kA - T.kcal) <= 250 ? "g" : kA - T.kcal <= 600 ? "a" : "r"),
+      cell("Training", `${round(hrs, 1)} h · ${tw.wo.length} sessions`, sports.length ? sports.join(", ") + " · " + cmp(hrs, lhrs, " h", 1, true) : "nothing logged yet", tw.wo.length ? "g" : "a", lhrs ? hrs / lhrs * 100 : (hrs ? 100 : 0)),
+      cell("Sleep", slA ? hhmm(slA * 60) + " avg" : "–", tw.sl.length ? `${slOK} of ${tw.sl.length} nights ≥ ${T.sleepHours} h${late ? ` · ${late} after midnight` : ""}` : "", slA == null ? "" : slA >= T.sleepHours ? "g" : slA >= T.sleepHours - 0.75 ? "a" : "r", slA != null ? slA / T.sleepHours * 100 : null),
+      cell("Protein", pDays.length ? `${pHit} of ${pDays.length} days` : "–", pDays.length ? `hit ${T.protein} g · avg ${round(avg(pDays.map(x => x.protein)))} g` : "", !pDays.length ? "" : pHit / pDays.length >= 0.7 ? "g" : pHit / pDays.length >= 0.4 ? "a" : "r", pDays.length ? avg(pDays.map(x => x.protein)) / T.protein * 100 : null),
+      cell("Calories", kA ? `${round(kA)} avg` : "–", kA ? `target ${round(T.kcal)} · ${cmp(kA, lkA, "", 0, null)}` : "", kA == null ? "" : Math.abs(kA - T.kcal) <= 250 ? "g" : kA - T.kcal <= 600 ? "a" : "r", kA != null ? kA / T.kcal * 100 : null),
       cell("Weight", wNow ? `${round(wNow, 1)} lb` : "–", wNow ? `${fmtDay(tw.wt.at(-1).date)} · ${cmp(wNow, wPrev, " lb", 1, false) || "goal " + T.weightGoal}` : "no weigh-in yet", wNow == null ? "" : wPrev == null || wNow <= wPrev ? "g" : wNow - wPrev < 1 ? "a" : "r"),
       cell("Blood pressure", bpA ? `${round(bpA[0])}/${round(bpA[1])}` : "–", bpA ? `${tw.bp.length} reading${tw.bp.length > 1 ? "s" : ""} · ${bpCat(bpA[0], bpA[1]).key}` : "no readings yet", bpA == null ? "" : bpA[0] < 120 && bpA[1] < 80 ? "g" : bpA[0] < 130 && bpA[1] < 80 ? "a" : "r"),
     ];
@@ -543,8 +560,8 @@
     const hlFallback = !hlList.length;
     if (hlFallback) hlList = d.workouts.filter(w => HL_SPORTS.includes(w.sport)).slice(-6).reverse();
     $("#page-training").innerHTML = `<h2>Training</h2>
-    ${weekStrip()}
     ${hlList.length ? `<div class="grid">${card("c12", "Highlights", `${hlFallback ? "Latest workouts (none in " + rangeLabel() + ")" : `Swims, rides, runs and gym sessions · ${rangeLabel()}`} · auto-plays, swipe or use the arrows`, highlights(hlList))}</div>` : ""}
+    ${weekStrip()}
     <div class="grid">
       ${tile("Sessions", wo.length, "", `${new Set(wo.map(w => w.date)).size} active days · ${rangeLabel()}`)}
       ${tile("Time", round(sum(wo.map(w => w.min)) / 60, 1), "h", `${round(sum(wo.map(w => w.min)) / 60 / perWeekSpan(), 1)} h per week`)}
@@ -579,6 +596,7 @@
     };
     drawLog();
     startHighlights();
+    animateWeekStrip();
     $("#tr-filters").onclick = e => { const b = e.target.closest(".chip"); if (!b) return; trainFilter = b.dataset.s; $("#tr-filters").querySelectorAll(".chip").forEach(c => c.classList.toggle("on", c === b)); drawLog(); };
 
     const st = inRange(d.steps);

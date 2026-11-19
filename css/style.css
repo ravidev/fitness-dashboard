@@ -320,3 +320,14 @@ p.big { font-size: 16px; margin: 4px 0 8px; }
 .ws-v { font-size: 17px; font-weight: 650; margin: 2px 0; font-variant-numeric: tabular-nums; }
 .ws-n { font-size: 12px; color: var(--muted); line-height: 1.35; }
 .ws-n .up-good { color: var(--good-text); } .ws-n .up-bad { color: var(--critical); }
+.ws-bar { height: 4px; border-radius: 2px; background: rgba(128,128,128,.18); margin-top: 8px; overflow: hidden; }
+.ws-bar i { display: block; height: 100%; width: 0; border-radius: 2px; background: var(--muted); transition: width 1.2s cubic-bezier(.2,.8,.2,1) .35s; }
+.ws-bar i.g { background: var(--good); } .ws-bar i.a { background: var(--warn); } .ws-bar i.r { background: var(--critical); }
+.week-strip.in .ws-bar i { width: var(--p); }
+.week-strip .ws-cell { opacity: 0; transform: translateY(10px); transition: opacity .45s ease, transform .45s ease; }
+.week-strip.in .ws-cell { opacity: 1; transform: none; }
+.week-strip.in .ws-cell:nth-child(2) { transition-delay: .08s; } .week-strip.in .ws-cell:nth-child(3) { transition-delay: .16s; }
+.week-strip.in .ws-cell:nth-child(4) { transition-delay: .24s; } .week-strip.in .ws-cell:nth-child(5) { transition-delay: .32s; } .week-strip.in .ws-cell:nth-child(6) { transition-delay: .4s; }
+.week-strip.in .ws-dot.r { animation: wsblink 1.6s ease-in-out 1.2s 2; }
+@keyframes wsblink { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .week-strip .ws-cell { opacity: 1; transform: none; transition: none; } .ws-bar i { transition: none; } }
