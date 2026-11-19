@@ -507,6 +507,83 @@
     requestAnimationFrame(tick);
   }
 
+
+  // ── Personal bests (all time, counted workouts) ─────────────────────
+  function personalBests() {
+    const d = state.data, wo = d.workouts.filter(w => w.date);
+    const best = (list, f) => list.reduce((b, w) => (f(w) != null && (b == null || f(w) > f(b))) ? w : b, null);
+    const by = s => wo.filter(w => w.sport === s && w.mi);
+    const runs = by("Run"), hms = runs.filter(w => w.mi >= 13 && w.mi <= 13.7 && w.min);
+    const tenk = runs.filter(w => w.mi >= 6.2 && w.min);
+    const fresh = date => daysBetween(parse(date), today()) <= 14;
+    const mmss = m => { const h = Math.floor(m / 60), mm = Math.floor(m % 60), ss = Math.round((m % 1) * 60); return h ? `${h}:${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}` : `${mm}:${String(ss).padStart(2, "0")}`; };
+    const items = [];
+    const add = (icon, label, value, w, extra) => w && items.push({ icon, label, value, date: w.date, title: (w.desc || w.type || "").split(/[;(]/)[0].trim(), extra });
+    const sw = best(by("Swim"), w => w.mi); add("🏊", "Longest swim", `${round(sw?.mi, 2)} mi`, sw);
+    const bk = best(by("Bike"), w => w.mi); add("🚴", "Longest ride", `${round(bk?.mi, 1)} mi`, bk);
+    const rn = best(runs, w => w.mi); add("🏃", "Longest run", `${round(rn?.mi, 1)} mi`, rn);
+    const hm = best(hms, w => -w.min); add("🏅", "Fastest half", mmss(hm?.min || 0), hm, "moving time");
+    const tk = best(tenk, w => -w.min / w.mi); add("⚡", "Best pace, 10K+ run", tk ? pace(tk) : "", tk);
+    // biggest training week
+    const wk = {}; wo.forEach(w => { const k = weekStart(w.date); wk[k] = (wk[k] || 0) + (w.min || 0); });
+    const bw = Object.entries(wk).sort((a, b) => b[1] - a[1])[0];
+    if (bw) items.push({ icon: "📈", label: "Biggest week", value: `${round(bw[1] / 60, 1)} h`, date: bw[0], title: `week of ${fmtDay(bw[0])}` });
+    // longest streak of active days
+    const days = [...new Set(wo.map(w => w.date))].sort();
+    let run = 0, bestRun = 0, end = null, prev = null;
+    for (const x of days) { run = prev && daysBetween(parse(prev), parse(x)) === 1 ? run + 1 : 1; if (run > bestRun) { bestRun = run; end = x; } prev = x; }
+    if (bestRun > 1) items.push({ icon: "🔥", label: "Longest streak", value: `${bestRun} days`, date: end, title: `active days in a row, ended ${fmtDay(end)}` });
+    if (!items.length) return "";
+    return `<div class="card pbs"><div class="ws-head"><h3>Personal bests</h3><span class="sub">Since ${parse(wo[0].date).toLocaleDateString(undefined, { month: "short", year: "numeric" })}, from your workout log · <span class="pb-new-k">NEW</span> = set in the last 2 weeks</span></div>
+      <div class="pb-row">${items.map((x, i) => `<div class="pb${fresh(x.date) ? " new" : ""}" style="--i:${i}" title="${esc(x.title)}">
+        <div class="pb-ic">${x.icon}</div><div class="pb-l">${x.label}${fresh(x.date) ? ' <b class="pb-tag">NEW</b>' : ""}</div>
+        <div class="pb-v">${x.value}</div><div class="pb-d">${fmtDay(x.date)}${x.date.slice(0, 4) !== iso(today()).slice(0, 4) ? ", " + x.date.slice(0, 4) : ""}${x.extra ? " · " + x.extra : ""}</div></div>`).join("")}</div></div>`;
+  }
+
+  // ── Next race countdown (Races tab) ─────────────────────────────────
+  let raceTimer = null;
+  function raceCountdown() {
+    const d = state.data, now = new Date();
+    const reg = d.races.filter(r => r.d >= today() && r.registered && !r.considering);
+    const r = reg[0]; if (!r) return "";
+    const days = daysBetween(today(), r.d);
+    const build = 182, pct = Math.max(3, Math.min(100, (1 - days / build) * 100));
+    const isTri = /Triathlon|70\.3|IRONMAN/.test(r.category);
+    const theme = isTri ? "tri" : /Marathon/.test(r.category) ? "mara" : "half";
+    // readiness: longest efforts in the last 4 weeks
+    const from = iso(addDays(today(), -28)), recent = d.workouts.filter(w => w.date >= from);
+    const lng = s => Math.max(0, ...recent.filter(w => w.sport === s).map(w => w.mi || 0));
+    const ready = isTri ? `Last 4 weeks, longest: swim ${round(lng("Swim"), 2)} mi · ride ${round(lng("Bike"), 1)} mi · run ${round(lng("Run"), 1)} mi`
+      : `Longest run in the last 4 weeks: ${round(lng("Run"), 1)} mi`;
+    const icon = isTri ? "🏊🚴🏃" : "🏃";
+    const then = reg.slice(1, 4).map(x => `<span class="rc-chip">${esc(x.name.replace(/^2027 /, ""))} · ${daysBetween(today(), x.d)} days</span>`).join("");
+    return `<div class="rc ${theme}" data-at="${r.date}">
+      <div class="rc-sky"><i class="rc-cloud"></i><i class="rc-cloud c2"></i></div>
+      <div class="rc-main">
+        <div class="rc-k">Next race · ${esc(r.category)}</div>
+        <div class="rc-name">${esc(r.name)}</div>
+        <div class="rc-meta">${fmtLong(r.date)}${r.location ? " · " + esc(r.location.split("(")[0].trim()) : ""}</div>
+        <div class="rc-clock">${["Days", "Hours", "Min", "Sec"].map(u => `<div><b data-u="${u}">–</b><span>${u}</span></div>`).join("")}</div>
+      </div>
+      <div class="rc-road"><div class="rc-fill" style="--p:${pct}%"></div><span class="rc-me" style="--p:${pct}%">${icon}</span><span class="rc-flag">🏁</span>
+        <div class="rc-cap"><span>${Math.round(days / 7)} weeks to go</span><span>${ready}</span></div></div>
+      ${then ? `<div class="rc-then">Then: ${then}</div>` : ""}
+    </div>`;
+  }
+  function startRaceClock() {
+    clearInterval(raceTimer);
+    const el = document.querySelector(".rc"); if (!el) return;
+    const target = parse(el.dataset.at); target.setHours(7, 0, 0, 0);   // assume a 7 AM start
+    const set = () => {
+      if (!document.body.contains(el)) return clearInterval(raceTimer);
+      let s = Math.max(0, Math.floor((target - new Date()) / 1000));
+      const v = { Days: Math.floor(s / 86400), Hours: Math.floor(s % 86400 / 3600), Min: Math.floor(s % 3600 / 60), Sec: s % 60 };
+      el.querySelectorAll(".rc-clock b").forEach(b => { const n = String(v[b.dataset.u]).padStart(b.dataset.u === "Days" ? 1 : 2, "0"); if (b.textContent !== n) { b.textContent = n; b.classList.remove("tick"); void b.offsetWidth; b.classList.add("tick"); } });
+    };
+    set(); raceTimer = setInterval(set, 1000);
+    requestAnimationFrame(() => el.classList.add("in"));
+  }
+
   // ── "This week" strip: Mon–today vs the same days last week ─────────
   function weekStrip() {
     const d = state.data;
@@ -562,6 +639,7 @@
     $("#page-training").innerHTML = `<h2>Training</h2>
     ${hlList.length ? `<div class="grid">${card("c12", "Highlights", `${hlFallback ? "Latest workouts (none in " + rangeLabel() + ")" : `Swims, rides, runs and gym sessions · ${rangeLabel()}`} · auto-plays, swipe or use the arrows`, highlights(hlList))}</div>` : ""}
     ${weekStrip()}
+    ${personalBests()}
     <div class="grid">
       ${tile("Sessions", wo.length, "", `${new Set(wo.map(w => w.date)).size} active days · ${rangeLabel()}`)}
       ${tile("Time", round(sum(wo.map(w => w.min)) / 60, 1), "h", `${round(sum(wo.map(w => w.min)) / 60 / perWeekSpan(), 1)} h per week`)}
@@ -597,6 +675,7 @@
     drawLog();
     startHighlights();
     animateWeekStrip();
+    { const pr = document.querySelector(".pbs"); if (pr) requestAnimationFrame(() => pr.classList.add("in")); }
     $("#tr-filters").onclick = e => { const b = e.target.closest(".chip"); if (!b) return; trainFilter = b.dataset.s; $("#tr-filters").querySelectorAll(".chip").forEach(c => c.classList.toggle("on", c === b)); drawLog(); };
 
     const st = inRange(d.steps);
@@ -1120,6 +1199,7 @@
     const reg = upcoming.filter(r => r.registered && !r.considering), cons = upcoming.filter(r => r.considering);
 
     $("#page-races").innerHTML = `<h2>Races</h2>
+    ${raceCountdown()}
     <p class="sub">Counts include races marked <b>Completed</b> or <b>Partial</b> plus <b>likely</b> finishes (status "Check result" or "finish not confirmed"). Races marked "likely did not run", "Did not start" and Fitbit-only possible days are left out.</p>
     <div class="grid">
       ${tile("Races run", done.length, "", `${conf.length} confirmed + ${likely.length} likely · since ${years[0] || "–"}`)}
@@ -1156,6 +1236,7 @@
       if (likely.some(r => r.category === c)) ds.push(bar(`${c} (likely)`, years.map(y => likely.filter(r => r.category === c && r.d.getFullYear() === y).length), catColor[c] + "66", { borderRadius: 0, borderColor: css("--surface"), borderWidth: { top: 2 }, maxBarThickness: 36 }));
     }
     chart("rc-years", { type: "bar", data: { labels: years, datasets: ds }, options: o });
+    startRaceClock();
   }
 
   // ── analytics (GoatCounter: no cookies, no personal data) ────
