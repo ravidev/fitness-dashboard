@@ -419,8 +419,12 @@
     Dance: `<div class="scn dance"><i class="disco"></i>
       <b class="note" style="--x:14%;--d:0s">♪</b><b class="note" style="--x:34%;--d:1.1s">♫</b><b class="note" style="--x:56%;--d:.5s">♪</b><b class="note" style="--x:76%;--d:1.6s">♫</b>
       <svg class="ico dancer" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="10" r="6"/><path d="M32 18v20M32 24l-14-8M32 24l14-10M32 38l-10 18M32 38l12 16"/></svg></div>`,
+    Hiit: `<div class="scn hiit"><i class="heat h1"></i><i class="heat h2"></i><i class="heat h3"></i><i class="heat h4"></i><i class="heat h5"></i>
+      <svg class="ico flame" viewBox="0 0 48 64" aria-hidden="true"><path d="M24 60c-11 0-18-8-18-18 0-9 6-14 9-22 1 6 4 9 7 10-1-9 3-18 10-24 0 10 10 17 10 32 0 12-7 22-18 22z"/><path d="M24 60c-5 0-8-4-8-9 0-5 4-8 6-12 1 4 3 5 5 6 0-3 1-6 3-8 1 6 2 9 2 14 0 5-3 9-8 9z"/></svg>
+      <svg class="ico pose" viewBox="0 0 64 40" aria-hidden="true"><circle cx="54" cy="12" r="5"/><path d="M48 16L14 26M30 21l-2 14M48 16l2 18M14 26l-8 8"/></svg></div>`,
   };
   const HL_SPORTS = ["Swim", "Bike", "Run", "Strength", "Cardio", "Dance"];
+  const sceneKey = w => w.sport === "Strength" && /hiit|pilates|yoga|barre/i.test(`${w.type} ${w.desc || ""}`) ? "Hiit" : w.sport;
   const pace = w => {
     if (!w.min || !w.mi) return "";
     if (w.sport === "Run") { const p = w.min / w.mi; return `${Math.floor(p)}:${String(Math.round((p % 1) * 60)).padStart(2, "0")} /mi`; }
@@ -431,10 +435,10 @@
     const photos = state.data.photos || [];
     const cards = list.map(w => {
       const ph = photos.filter(p => p.date === w.date && (!p.sport || p.sport === w.sport));
-      const bg = ph.length ? `<div class="scn photo">${ph.map((p, i) => `<img src="${esc(p.src)}" alt="" loading="lazy"${i ? "" : ' class="on"'}>`).join("")}${ph.length > 1 ? `<span class="ph-n">📷 ${ph.length}</span>` : ""}</div>${SCENES[w.sport].replace('class="scn ', 'class="scn ovl ')}` : SCENES[w.sport];
+      const bg = ph.length ? `<div class="scn photo">${ph.map((p, i) => `<img src="${esc(p.src)}" alt="" loading="lazy"${i ? "" : ' class="on"'}>`).join("")}${ph.length > 1 ? `<span class="ph-n">📷 ${ph.length}</span>` : ""}</div>${SCENES[sceneKey(w)].replace('class="scn ', 'class="scn ovl ')}` : SCENES[sceneKey(w)];
       const stats = [w.mi ? `${round(w.mi, w.sport === "Bike" ? 1 : 2)} mi` : "", w.min ? (w.min < 60 ? `${Math.round(w.min)} min` : hhmm(w.min)) : "", pace(w), w.hr ? `${w.hr} bpm` : "", w.kcal ? `${round(w.kcal)} kcal` : ""].filter(Boolean);
       const title = esc((w.desc || w.type).split(/[;(]/)[0].trim());
-      return `<article class="hl ${w.sport.toLowerCase()}">
+      return `<article class="hl ${sceneKey(w).toLowerCase()}">
         <div class="hl-media">${bg}
           <div class="hl-body">
             <div class="hl-top"><span class="hl-sport">${/hiit/i.test(w.type) ? "HIIT" : w.sport}</span>${w.race || /\btri\b|half marathon|race leg|marathon/i.test(w.desc || "") ? '<span class="hl-race">Race</span>' : ""}</div>
@@ -485,6 +489,43 @@
     return Math.max(1, daysBetween(parse(wFirst > startOf ? wFirst : startOf), parse(end)) + 1) / 7;
   }
 
+
+  // ── "This week" strip: Mon–today vs the same days last week ─────────
+  function weekStrip() {
+    const d = state.data;
+    const t = iso(today()), ws = weekStart(t);
+    const n = daysBetween(parse(ws), parse(t)) + 1;            // days elapsed this week
+    const lws = iso(addDays(parse(ws), -7)), lwe = iso(addDays(parse(ws), -8 + n));
+    const inW = (l, a, b) => l.filter(x => x.date >= a && x.date <= b);
+    const tw = { wo: inW(d.workouts, ws, t), sl: inW(d.sleepHistory, ws, t), nu: inW(d.nutrition, ws, t), wt: inW(d.weights, ws, t), bp: inW(d.bp, ws, t) };
+    const lw = { wo: inW(d.workouts, lws, lwe), sl: inW(d.sleepHistory, lws, lwe), nu: inW(d.nutrition, lws, lwe), wt: inW(d.weights, lws, iso(addDays(parse(ws), -1))) };
+    const dot = c => `<i class="ws-dot ${c}"></i>`;
+    const cmp = (a, b, unit, dig, goodUp) => {
+      if (a == null || b == null) return "";
+      const x = a - b; if (Math.abs(x) < Math.pow(10, -dig) / 2) return "same as last wk";
+      const good = goodUp == null ? "" : (x > 0) === goodUp ? "up-good" : "up-bad";
+      return `<span class="${good}">${x > 0 ? "▲" : "▼"} ${round(Math.abs(x), dig)}${unit}</span> vs last wk`;
+    };
+    const hrs = sum(tw.wo.map(w => w.min)) / 60, lhrs = sum(lw.wo.map(w => w.min)) / 60;
+    const sports = [...new Set(tw.wo.map(w => w.sport))];
+    const slA = avg(tw.sl.map(x => x.hours)), slOK = tw.sl.filter(x => x.hours >= T.sleepHours).length;
+    const late = tw.sl.filter(x => x.bedRel != null && x.bedRel >= 24).length;
+    const pDays = tw.nu.filter(x => x.protein), pHit = pDays.filter(x => x.protein >= T.protein).length;
+    const kA = avg(tw.nu.map(x => x.kcal)), lkA = avg(lw.nu.map(x => x.kcal));
+    const wNow = tw.wt.at(-1)?.weight, wPrev = avg(lw.wt.map(x => x.weight));
+    const bpA = tw.bp.length ? [avg(tw.bp.map(x => x.sys)), avg(tw.bp.map(x => x.dia))] : null;
+    const cell = (label, value, note, c) => `<div class="ws-cell">${dot(c)}<div class="ws-l">${label}</div><div class="ws-v">${value}</div><div class="ws-n">${note || "&nbsp;"}</div></div>`;
+    const cells = [
+      cell("Training", `${round(hrs, 1)} h · ${tw.wo.length} sessions`, sports.length ? sports.join(", ") + " · " + cmp(hrs, lhrs, " h", 1, true) : "nothing logged yet", tw.wo.length ? "g" : "a"),
+      cell("Sleep", slA ? hhmm(slA * 60) + " avg" : "–", tw.sl.length ? `${slOK} of ${tw.sl.length} nights ≥ ${T.sleepHours} h${late ? ` · ${late} after midnight` : ""}` : "", slA == null ? "" : slA >= T.sleepHours ? "g" : slA >= T.sleepHours - 0.75 ? "a" : "r"),
+      cell("Protein", pDays.length ? `${pHit} of ${pDays.length} days` : "–", pDays.length ? `hit ${T.protein} g · avg ${round(avg(pDays.map(x => x.protein)))} g` : "", !pDays.length ? "" : pHit / pDays.length >= 0.7 ? "g" : pHit / pDays.length >= 0.4 ? "a" : "r"),
+      cell("Calories", kA ? `${round(kA)} avg` : "–", kA ? `target ${round(T.kcal)} · ${cmp(kA, lkA, "", 0, null)}` : "", kA == null ? "" : Math.abs(kA - T.kcal) <= 250 ? "g" : kA - T.kcal <= 600 ? "a" : "r"),
+      cell("Weight", wNow ? `${round(wNow, 1)} lb` : "–", wNow ? `${fmtDay(tw.wt.at(-1).date)} · ${cmp(wNow, wPrev, " lb", 1, false) || "goal " + T.weightGoal}` : "no weigh-in yet", wNow == null ? "" : wPrev == null || wNow <= wPrev ? "g" : wNow - wPrev < 1 ? "a" : "r"),
+      cell("Blood pressure", bpA ? `${round(bpA[0])}/${round(bpA[1])}` : "–", bpA ? `${tw.bp.length} reading${tw.bp.length > 1 ? "s" : ""} · ${bpCat(bpA[0], bpA[1]).key}` : "no readings yet", bpA == null ? "" : bpA[0] < 120 && bpA[1] < 80 ? "g" : bpA[0] < 130 && bpA[1] < 80 ? "a" : "r"),
+    ];
+    return `<div class="card week-strip"><div class="ws-head"><h3>This week</h3><span class="sub">${fmtDay(ws)} – ${fmtDay(t)} · day ${n} of 7 · compared with the same days last week</span></div><div class="ws-row">${cells.join("")}</div></div>`;
+  }
+
   function renderTraining() {
     const d = state.data, wo = inRange(d.workouts);
     const bySport = Object.fromEntries(SPORTS.map(s => [s, wo.filter(w => w.sport === s)]));
@@ -502,6 +543,7 @@
     const hlFallback = !hlList.length;
     if (hlFallback) hlList = d.workouts.filter(w => HL_SPORTS.includes(w.sport)).slice(-6).reverse();
     $("#page-training").innerHTML = `<h2>Training</h2>
+    ${weekStrip()}
     ${hlList.length ? `<div class="grid">${card("c12", "Highlights", `${hlFallback ? "Latest workouts (none in " + rangeLabel() + ")" : `Swims, rides, runs and gym sessions · ${rangeLabel()}`} · auto-plays, swipe or use the arrows`, highlights(hlList))}</div>` : ""}
     <div class="grid">
       ${tile("Sessions", wo.length, "", `${new Set(wo.map(w => w.date)).size} active days · ${rangeLabel()}`)}
