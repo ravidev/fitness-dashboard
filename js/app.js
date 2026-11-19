@@ -410,7 +410,17 @@
       <svg class="ico wheel-pair" viewBox="0 0 96 56" aria-hidden="true"><g class="wheel" style="transform-origin:22px 36px"><circle cx="22" cy="36" r="16"/><path d="M22 20v32M6 36h32M11 25l22 22M33 25L11 47"/></g><g class="wheel" style="transform-origin:74px 36px"><circle cx="74" cy="36" r="16"/><path d="M74 20v32M58 36h32M63 25l22 22M85 25L63 47"/></g><path d="M22 36l18-20h22l12 20M40 16l8 20h-26M58 10h8"/></svg></div>`,
     Run: `<div class="scn run"><i class="sun"></i><i class="hills h1"></i><i class="hills h2"></i><i class="track"></i>
       <svg class="ico runner" viewBox="0 0 64 64" aria-hidden="true"><circle cx="38" cy="10" r="6"/><path d="M34 20l-8 14 10 6-4 16M34 20l10 10 10-2M30 26l-12 2M26 34l-10 12"/></svg></div>`,
+    Strength: `<div class="scn strength"><i class="glow"></i>
+      <svg class="ico lift" viewBox="0 0 80 40" aria-hidden="true"><path d="M14 20h52"/><rect x="6" y="8" width="8" height="24" rx="2"/><rect x="66" y="8" width="8" height="24" rx="2"/><rect x="0" y="13" width="6" height="14" rx="2"/><rect x="74" y="13" width="6" height="14" rx="2"/></svg>
+      <svg class="pulse" viewBox="0 0 240 30" preserveAspectRatio="none" aria-hidden="true"><path d="M0 15h30l6-10 8 20 6-14 4 4h46l6-10 8 20 6-14 4 4h46l6-10 8 20 6-14 4 4h22"/></svg></div>`,
+    Cardio: `<div class="scn cardio"><i class="stairs"></i>
+      <svg class="ico heart" viewBox="0 0 64 58" aria-hidden="true"><path d="M32 54S4 36 4 18A14 14 0 0 1 32 12a14 14 0 0 1 28 6c0 18-28 36-28 36z"/><path d="M14 28h10l4-7 6 13 4-6h12"/></svg>
+      <svg class="pulse" viewBox="0 0 240 30" preserveAspectRatio="none" aria-hidden="true"><path d="M0 15h30l6-10 8 20 6-14 4 4h46l6-10 8 20 6-14 4 4h46l6-10 8 20 6-14 4 4h22"/></svg></div>`,
+    Dance: `<div class="scn dance"><i class="disco"></i>
+      <b class="note" style="--x:14%;--d:0s">♪</b><b class="note" style="--x:34%;--d:1.1s">♫</b><b class="note" style="--x:56%;--d:.5s">♪</b><b class="note" style="--x:76%;--d:1.6s">♫</b>
+      <svg class="ico dancer" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="10" r="6"/><path d="M32 18v20M32 24l-14-8M32 24l14-10M32 38l-10 18M32 38l12 16"/></svg></div>`,
   };
+  const HL_SPORTS = ["Swim", "Bike", "Run", "Strength", "Cardio", "Dance"];
   const pace = w => {
     if (!w.min || !w.mi) return "";
     if (w.sport === "Run") { const p = w.min / w.mi; return `${Math.floor(p)}:${String(Math.round((p % 1) * 60)).padStart(2, "0")} /mi`; }
@@ -427,7 +437,7 @@
       return `<article class="hl ${w.sport.toLowerCase()}">
         <div class="hl-media">${bg}
           <div class="hl-body">
-            <div class="hl-top"><span class="hl-sport">${w.sport}</span>${w.race || /\btri\b|half marathon|race leg|marathon/i.test(w.desc || "") ? '<span class="hl-race">Race</span>' : ""}</div>
+            <div class="hl-top"><span class="hl-sport">${/hiit/i.test(w.type) ? "HIIT" : w.sport}</span>${w.race || /\btri\b|half marathon|race leg|marathon/i.test(w.desc || "") ? '<span class="hl-race">Race</span>' : ""}</div>
             <div class="hl-stats">${stats.map(x => `<span>${x}</span>`).join("")}</div>
           </div>
         </div>
@@ -485,14 +495,14 @@
     const woAll = inRange(d.allWorkouts), skipped = woAll.filter(w => !w.counted);
     const rowsFor = () => trainFilter === "All" ? woAll : woAll.filter(w => w.sport === trainFilter);
 
-    const sbr = wo.filter(w => ["Swim", "Bike", "Run"].includes(w.sport)).slice().reverse();
+    const sbr = wo.filter(w => HL_SPORTS.includes(w.sport)).slice().reverse();
     const hasPhoto = w => (d.photos || []).some(p => p.date === w.date && (!p.sport || p.sport === w.sport));
     // latest 12, plus any older ones in range that have photos
     let hlList = sbr.filter((w, i) => i < 12 || hasPhoto(w));
     const hlFallback = !hlList.length;
-    if (hlFallback) hlList = d.workouts.filter(w => ["Swim", "Bike", "Run"].includes(w.sport)).slice(-6).reverse();
+    if (hlFallback) hlList = d.workouts.filter(w => HL_SPORTS.includes(w.sport)).slice(-6).reverse();
     $("#page-training").innerHTML = `<h2>Training</h2>
-    ${hlList.length ? `<div class="grid">${card("c12", "Highlights", `${hlFallback ? "Latest swims, rides and runs (none in " + rangeLabel() + ")" : `Swims, rides and runs · ${rangeLabel()}`} · auto-plays, swipe or use the arrows`, highlights(hlList))}</div>` : ""}
+    ${hlList.length ? `<div class="grid">${card("c12", "Highlights", `${hlFallback ? "Latest workouts (none in " + rangeLabel() + ")" : `Swims, rides, runs and gym sessions · ${rangeLabel()}`} · auto-plays, swipe or use the arrows`, highlights(hlList))}</div>` : ""}
     <div class="grid">
       ${tile("Sessions", wo.length, "", `${new Set(wo.map(w => w.date)).size} active days · ${rangeLabel()}`)}
       ${tile("Time", round(sum(wo.map(w => w.min)) / 60, 1), "h", `${round(sum(wo.map(w => w.min)) / 60 / perWeekSpan(), 1)} h per week`)}

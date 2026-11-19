@@ -87,10 +87,10 @@
     if (/swim/.test(t)) return "Swim";
     if (/bike|ride|cycl/.test(t)) return "Bike";
     if (/run|marathon/.test(t)) return "Run";
-    if (/strength|hiit|weights/.test(t)) return "Strength";
-    if (/dance/.test(t)) return "Dance";
+    if (/dance|zumba/.test(t)) return "Dance";
+    if (/strength|hiit|weights|^workout/.test(t)) return "Strength";
     if (/walk|hike/.test(t)) return "Walk";
-    if (/stair|int2|cardio|elliptical|row/.test(t)) return "Cardio";
+    if (/stair|step|int2|cardio|elliptical|row/.test(t)) return "Cardio";
     return "Other";
   }
 
