@@ -423,13 +423,15 @@
       const ph = photos.filter(p => p.date === w.date && (!p.sport || p.sport === w.sport));
       const bg = ph.length ? `<div class="scn photo">${ph.map((p, i) => `<img src="${esc(p.src)}" alt="" loading="lazy"${i ? "" : ' class="on"'}>`).join("")}${ph.length > 1 ? `<span class="ph-n">📷 ${ph.length}</span>` : ""}</div>${SCENES[w.sport].replace('class="scn ', 'class="scn ovl ')}` : SCENES[w.sport];
       const stats = [w.mi ? `${round(w.mi, w.sport === "Bike" ? 1 : 2)} mi` : "", w.min ? (w.min < 60 ? `${Math.round(w.min)} min` : hhmm(w.min)) : "", pace(w), w.hr ? `${w.hr} bpm` : "", w.kcal ? `${round(w.kcal)} kcal` : ""].filter(Boolean);
-      return `<article class="hl ${w.sport.toLowerCase()}">${bg}
-        <div class="hl-body">
-          <div class="hl-top"><span class="hl-sport">${w.sport}</span>${w.race || /\btri\b|half marathon|race leg|marathon/i.test(w.desc || "") ? '<span class="hl-race">Race</span>' : ""}</div>
-          <div class="hl-title">${esc((w.desc || w.type).split(/[;(]/)[0].trim())}</div>
-          <div class="hl-date">${fmtLong(w.date)}</div>
-          <div class="hl-stats">${stats.map(x => `<span>${x}</span>`).join("")}</div>
-        </div></article>`;
+      const title = esc((w.desc || w.type).split(/[;(]/)[0].trim());
+      return `<article class="hl ${w.sport.toLowerCase()}">
+        <div class="hl-media">${bg}
+          <div class="hl-body">
+            <div class="hl-top"><span class="hl-sport">${w.sport}</span>${w.race || /\btri\b|half marathon|race leg|marathon/i.test(w.desc || "") ? '<span class="hl-race">Race</span>' : ""}</div>
+            <div class="hl-stats">${stats.map(x => `<span>${x}</span>`).join("")}</div>
+          </div>
+        </div>
+        <div class="hl-cap"><div class="hl-title" title="${title}">${title}</div><div class="hl-date">${fmtLong(w.date)}</div></div></article>`;
     }).join("");
     return `<div class="hl-wrap"><div class="hl-row" id="hl-row" tabindex="0" aria-label="Workout highlights">${cards}</div>
       <div class="hl-nav"><button class="chip" id="hl-prev" aria-label="Previous highlight">◀</button><span id="hl-dots"></span><button class="chip" id="hl-next" aria-label="Next highlight">▶</button><button class="chip" id="hl-play" aria-label="Pause auto-play">❚❚ Pause</button></div></div>`;
