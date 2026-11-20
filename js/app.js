@@ -425,6 +425,13 @@
   };
   const HL_SPORTS = ["Swim", "Bike", "Run", "Strength", "Cardio", "Dance"];
   const sceneKey = w => w.sport !== "Strength" ? w.sport : /zumba|u-?jam|bombay jam|dance/i.test(`${w.type} ${w.desc || ""}`) ? "Dance" : /hiit|pilates|yoga|barre/i.test(`${w.type} ${w.desc || ""}`) ? "Hiit" : w.sport;
+  // Workout title for cards: drop Strava tags and the trailing start/elapsed details, keep the rest as written
+  const woTitle = w => (w.desc || w.type || "")
+    .replace(/\s*\(Strava(?::\s*'[^']*'[^)]*)?\)/gi, "")
+    .replace(/,?\s*per Ravi in chat[^,;)]*/gi, "")
+    .split(/;|,\s*start \d/i)[0]
+    .replace(/\s*\([^)]*$/, "")                  // a bracket left open by the cut above
+    .replace(/[\s,.]+$/, "").trim() || w.type;
   const pace = w => {
     if (!w.min || !w.mi) return "";
     if (w.sport === "Run") { const p = w.min / w.mi; return `${Math.floor(p)}:${String(Math.round((p % 1) * 60)).padStart(2, "0")} /mi`; }
@@ -437,7 +444,7 @@
       const ph = photos.filter(p => p.date === w.date && (!p.sport || p.sport === w.sport));
       const bg = ph.length ? `<div class="scn photo">${ph.map((p, i) => `<img src="${esc(p.src)}" alt="" loading="lazy"${i ? "" : ' class="on"'}>`).join("")}${ph.length > 1 ? `<span class="ph-n">📷 ${ph.length}</span>` : ""}</div>${SCENES[sceneKey(w)].replace('class="scn ', 'class="scn ovl ')}` : SCENES[sceneKey(w)];
       const stats = [w.mi ? `${round(w.mi, w.sport === "Bike" ? 1 : 2)} mi` : "", w.min ? (w.min < 60 ? `${Math.round(w.min)} min` : hhmm(w.min)) : "", pace(w), w.hr ? `${w.hr} bpm` : "", w.kcal ? `${round(w.kcal)} kcal` : ""].filter(Boolean);
-      const title = esc((w.desc || w.type).split(/[;(]/)[0].trim());
+      const title = esc(woTitle(w));
       return `<article class="hl ${sceneKey(w).toLowerCase()}">
         <div class="hl-media">${bg}
           <div class="hl-body">
@@ -470,6 +477,7 @@
     row.addEventListener("touchstart", () => { playing = false; label(); }, { passive: true });
     label(); mark();
     hlTimer = setInterval(() => { if (playing && !hover && document.visibilityState === "visible" && $("#hl-row") === row) go(idx + 1); }, 5000);
+    row.addEventListener("click", e => { const c = e.target.closest(".hl-cap"); if (c) c.classList.toggle("open"); });
     // cards with several photos cross-fade through them
     clearInterval(phTimer);
     phTimer = setInterval(() => {
@@ -518,7 +526,7 @@
     const fresh = date => daysBetween(parse(date), today()) <= 14;
     const mmss = m => { const h = Math.floor(m / 60), mm = Math.floor(m % 60), ss = Math.round((m % 1) * 60); return h ? `${h}:${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}` : `${mm}:${String(ss).padStart(2, "0")}`; };
     const items = [];
-    const add = (icon, label, value, w, extra) => w && items.push({ icon, label, value, date: w.date, title: (w.desc || w.type || "").split(/[;(]/)[0].trim(), extra });
+    const add = (icon, label, value, w, extra) => w && items.push({ icon, label, value, date: w.date, title: woTitle(w), extra });
     const sw = best(by("Swim"), w => w.mi); add("🏊", "Longest swim", `${round(sw?.mi, 2)} mi`, sw);
     const bk = best(by("Bike"), w => w.mi); add("🚴", "Longest ride", `${round(bk?.mi, 1)} mi`, bk);
     const rn = best(runs, w => w.mi); add("🏃", "Longest run", `${round(rn?.mi, 1)} mi`, rn);
