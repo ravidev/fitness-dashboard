@@ -424,7 +424,7 @@
       <svg class="ico pose" viewBox="0 0 64 40" aria-hidden="true"><circle cx="54" cy="12" r="5"/><path d="M48 16L14 26M30 21l-2 14M48 16l2 18M14 26l-8 8"/></svg></div>`,
   };
   const HL_SPORTS = ["Swim", "Bike", "Run", "Strength", "Cardio", "Dance"];
-  const sceneKey = w => w.sport === "Strength" && /hiit|pilates|yoga|barre/i.test(`${w.type} ${w.desc || ""}`) ? "Hiit" : w.sport;
+  const sceneKey = w => w.sport !== "Strength" ? w.sport : /zumba|u-?jam|bombay jam|dance/i.test(`${w.type} ${w.desc || ""}`) ? "Dance" : /hiit|pilates|yoga|barre/i.test(`${w.type} ${w.desc || ""}`) ? "Hiit" : w.sport;
   const pace = w => {
     if (!w.min || !w.mi) return "";
     if (w.sport === "Run") { const p = w.min / w.mi; return `${Math.floor(p)}:${String(Math.round((p % 1) * 60)).padStart(2, "0")} /mi`; }
@@ -441,7 +441,7 @@
       return `<article class="hl ${sceneKey(w).toLowerCase()}">
         <div class="hl-media">${bg}
           <div class="hl-body">
-            <div class="hl-top"><span class="hl-sport">${/hiit/i.test(w.type) ? "HIIT" : w.sport}</span>${w.race || /\btri\b|half marathon|race leg|marathon/i.test(w.desc || "") ? '<span class="hl-race">Race</span>' : ""}</div>
+            <div class="hl-top"><span class="hl-sport">${{ Hiit: "HIIT", Dance: "Dance" }[sceneKey(w)] || w.sport}</span>${w.race || /\btri\b|half marathon|race leg|marathon/i.test(w.desc || "") ? '<span class="hl-race">Race</span>' : ""}</div>
             <div class="hl-stats">${stats.map(x => `<span>${x}</span>`).join("")}</div>
           </div>
         </div>
