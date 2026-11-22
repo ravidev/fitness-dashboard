@@ -1,5 +1,25 @@
 [
  {
+  "date": "2026-11-21",
+  "sport": "Bike",
+  "src": "photos/2026-11-21-ride-1.jpg"
+ },
+ {
+  "date": "2026-11-21",
+  "sport": "Bike",
+  "src": "photos/2026-11-21-ride-2.jpg"
+ },
+ {
+  "date": "2026-11-21",
+  "sport": "Bike",
+  "src": "photos/2026-11-21-ride-3.jpg"
+ },
+ {
+  "date": "2026-11-20",
+  "sport": "Strength",
+  "src": "photos/2026-11-20-strength-1.jpg"
+ },
+ {
   "date": "2026-11-19",
   "sport": "Strength",
   "src": "photos/2026-11-19-workout-1.jpg"

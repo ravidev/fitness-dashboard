@@ -21,18 +21,18 @@ Days at or above 140 g protein,4
 Number of workouts,32
 Total activity kcal,15643
 ,
-"Sleep (Aug 9–Nov 19, Garmin Forerunner 970)",
-Nights tracked,103
+"Sleep (Aug 9–Nov 21, Garmin Forerunner 970)",
+Nights tracked,105
 Average sleep,~5h 32m
-Average score,61.9
-Score labels (FAIR / POOR / GOOD / EXCELLENT),56 FAIR / 39 POOR / 6 GOOD / 2 EXCELLENT
-Average overnight HRV (ms),34.6
+Average score,61.6
+Score labels (FAIR / POOR / GOOD / EXCELLENT),56 FAIR / 41 POOR / 6 GOOD / 2 EXCELLENT
+Average overnight HRV (ms),34.5
 Average deep (min),81
 Average REM (min),39
-Nights ≥7h,9
+Nights ≥7h,10
 Best night,Oct 15 & Oct 12 — score 90
 Worst night,Sep 14 — score 18
-Coverage note,"Food Log/DailyStats cover Sep 22–Sun Nov 15, with all days through Nov 15 complete as logged (Nov 15 is the latest logged day; food entered through the after-dinner snacks). Activity calories through Sun Nov 15 are logged separately by Fitnesstracker; Nov 9, 11 and 13 had no recorded activities and use Garmin active calories. Sleep is current through the Nov 19 wake date with no missing nights since Aug 9; longest verified main sleep is used when sources disagree (see Sleep notes). Garmin's Nov 4 nap (24 min) is included separately."
+Coverage note,"Food Log/DailyStats cover Sep 22–Sun Nov 15, with all days through Nov 15 complete as logged (Nov 15 is the latest logged day; food entered through the after-dinner snacks). Activity calories through Sun Nov 15 are logged separately by Fitnesstracker; Nov 9, 11 and 13 had no recorded activities and use Garmin active calories. Sleep is current through the Nov 21 wake date with no missing nights since Aug 9; longest verified main sleep is used when sources disagree (see Sleep notes). Garmin's Nov 4 nap (24 min) is included separately."
 ,
 Notes,
 ,"Food kcal/protein/carbs/fat are estimates from meal descriptions/photos (DailyFoodCalorieTracker); carbs/fat added Oct 12, 2026. Calories marked Garmin/Strava are from the watch/app; others are estimates. Workouts confirmed via Strava and food log; durations/distances missing where Strava emails didn't include them. 9/24 was a CT oral-contrast day (low intake). 10/6 food log now complete (dinner added)."

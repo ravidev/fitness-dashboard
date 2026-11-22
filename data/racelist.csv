@@ -3,7 +3,7 @@ Date,Race,Location,Distance/Type,Status,Finish Time,Registration,Legend
 "Sep 19, 2027",IRONMAN 70.3 Washington Tri-Cities,"Richland, WA",Triathlon (70.3),Considering (not registered),,,
 "Sep 12, 2027",2027 Sandstone IRONMAN 70.3 Santa Cruz,"Santa Cruz, CA",Triathlon (70.3),Upcoming – Registered,,Registered,Completed – Marathon (light orange row)
 "Aug 8, 2027",Tri Santa Cruz,"Santa Cruz, CA",Triathlon (Olympic),Upcoming – Registered,,Registered,Completed – Triathlon / aquathon (light green row)
-"Jun 5, 2027",Escape from Alcatraz Triathlon,"San Francisco, CA",Triathlon (~1.5 mi swim / 18 mi bike / 8 mi run),Entered – Round 2 Random Drawing (Pending Approval),,Registered,Not completed: only Distance/Type cell gets a pale tint of its type color
+"Jun 5, 2027",Escape from Alcatraz Triathlon,"San Francisco, CA",Triathlon (~1.5 mi swim / 18 mi bike / 8 mi run),Upcoming – Registered,,Registered,Not completed: only Distance/Type cell gets a pale tint of its type color
 "May 23, 2027",IRONMAN 70.3 Northern California,"Redding, CA (swim: Whiskeytown Lake)",Triathlon (70.3),Upcoming – Registered,,Registered,Gray text = Considering / Not registered / Sold out / Not now / Registered (likely did not run)
 "May 8, 2027",Folsom Lake International,"Folsom, CA (Folsom Lake)",Triathlon (Olympic),Considering (not registered),,Not registered,Yellow status = partial (finished some legs)
 "Apr 25, 2027",Big Sur Marathon,"Big Sur, CA",Marathon,Upcoming – Registered,,Registered,Completed rows are filled; others are plain.
