@@ -262,71 +262,85 @@
  {
   "date": "2026-10-18",
   "sport": "Swim",
-  "src": "photos/2026-10-18-swim-1.jpg"
+  "src": "photos/2026-10-18-swim-1.jpg",
+  "strava": "https://www.strava.com/activities/20639465721"
  },
  {
   "date": "2026-10-18",
   "sport": "Swim",
-  "src": "photos/2026-10-18-swim-2.jpg"
+  "src": "photos/2026-10-18-swim-2.jpg",
+  "strava": "https://www.strava.com/activities/20639465721"
  },
  {
   "date": "2026-10-10",
   "sport": "Bike",
-  "src": "photos/2026-10-10-ride-1.jpg"
+  "src": "photos/2026-10-10-ride-1.jpg",
+  "strava": "https://www.strava.com/activities/20532022055"
  },
  {
   "date": "2026-10-10",
   "sport": "Bike",
-  "src": "photos/2026-10-10-ride-2.jpg"
+  "src": "photos/2026-10-10-ride-2.jpg",
+  "strava": "https://www.strava.com/activities/20532022055"
  },
  {
   "date": "2026-10-03",
   "sport": "Swim",
-  "src": "photos/2026-10-03-swim-1.jpg"
+  "src": "photos/2026-10-03-swim-1.jpg",
+  "strava": "https://www.strava.com/activities/20438137890"
  },
  {
   "date": "2026-10-03",
   "sport": "Swim",
-  "src": "photos/2026-10-03-swim-2.jpg"
+  "src": "photos/2026-10-03-swim-2.jpg",
+  "strava": "https://www.strava.com/activities/20438137890"
  },
  {
   "date": "2026-10-03",
   "sport": "Swim",
-  "src": "photos/2026-10-03-swim-3.jpg"
+  "src": "photos/2026-10-03-swim-3.jpg",
+  "strava": "https://www.strava.com/activities/20438137890"
  },
  {
   "date": "2026-10-03",
   "sport": "Swim",
-  "src": "photos/2026-10-03-swim-4.jpg"
+  "src": "photos/2026-10-03-swim-4.jpg",
+  "strava": "https://www.strava.com/activities/20438137890"
  },
  {
   "date": "2026-10-03",
   "sport": "Swim",
-  "src": "photos/2026-10-03-swim-5.jpg"
+  "src": "photos/2026-10-03-swim-5.jpg",
+  "strava": "https://www.strava.com/activities/20438137890"
  },
  {
   "date": "2026-09-27",
   "sport": "Bike",
-  "src": "photos/2026-09-27-ride-1.jpg"
+  "src": "photos/2026-09-27-ride-1.jpg",
+  "strava": "https://www.strava.com/activities/20356116252"
  },
  {
   "date": "2026-09-27",
   "sport": "Run",
-  "src": "photos/2026-09-27-run-1.jpg"
+  "src": "photos/2026-09-27-run-1.jpg",
+  "strava": "https://www.strava.com/activities/20357289486"
  },
  {
   "date": "2026-09-27",
   "sport": "Run",
-  "src": "photos/2026-09-27-run-2.jpg"
+  "src": "photos/2026-09-27-run-2.jpg",
+  "strava": "https://www.strava.com/activities/20357289486"
  },
  {
   "date": "2026-09-27",
   "sport": "Run",
-  "src": "photos/2026-09-27-run-3.jpg"
+  "src": "photos/2026-09-27-run-3.jpg",
+  "strava": "https://www.strava.com/activities/20357289486"
  },
  {
   "date": "2026-09-26",
   "sport": "Swim",
-  "src": "photos/2026-09-26-swim-1.jpg"
+  "src": "photos/2026-09-26-swim-1.jpg",
+  "strava": "https://www.strava.com/activities/20341364649"
  }
 ]

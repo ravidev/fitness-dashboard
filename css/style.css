@@ -372,3 +372,11 @@ p.big { font-size: 16px; margin: 4px 0 8px; }
 @media (max-width: 560px) { .rc-name { font-size: 21px; } .rc-clock div { min-width: 0; flex: 1; } .rc-clock b { font-size: 22px; } }
 @media (prefers-reduced-motion: reduce) { .pb, .rc-fill, .rc-me { transition: none; } .pb { opacity: 1; transform: none; } .pb::after, .pb-ic, .rc-me, .rc-flag, .rc-cloud, .rc-fill, .rc-clock b.tick, .pb.new { animation: none !important; } }
 @media (max-width: 560px) { .rc-road { margin-bottom: 52px; } .rc-cap { flex-direction: column; } }
+/* Strava link on highlight cards */
+a.hl-media { display: block; text-decoration: none; cursor: pointer; }
+.hl-strava { position: absolute; z-index: 3; left: 10px; bottom: 10px; font-size: 11px; font-weight: 650; color: #fff; background: #fc4c02; padding: 3px 8px; border-radius: 999px; opacity: 0; transform: translateY(4px); transition: opacity .2s, transform .2s; }
+a.hl-media:hover .hl-strava, a.hl-media:focus-visible .hl-strava { opacity: 1; transform: none; }
+@media (hover: none) { .hl-strava { opacity: .92; transform: none; } }
+.hl-date a { color: #e8590c; text-decoration: none; font-weight: 600; }
+.hl-date a:hover { text-decoration: underline; }
+.hl.run .hl-strava, .hl.bike .hl-strava, .hl.strength .hl-strava, .hl.cardio .hl-strava { bottom: auto; top: 44px; }

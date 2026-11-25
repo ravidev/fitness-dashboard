@@ -447,14 +447,18 @@
       const bg = ph.length ? `<div class="scn photo">${ph.map((p, i) => `<img src="${esc(p.src)}" alt="" loading="lazy"${i ? "" : ' class="on"'}>`).join("")}${ph.length > 1 ? `<span class="ph-n">📷 ${ph.length}</span>` : ""}</div>${SCENES[sceneKey(w)].replace('class="scn ', 'class="scn ovl ')}` : SCENES[sceneKey(w)];
       const stats = [w.mi ? `${round(w.mi, w.sport === "Bike" ? 1 : 2)} mi` : "", w.min ? (w.min < 60 ? `${Math.round(w.min)} min` : hhmm(w.min)) : "", pace(w), w.hr ? `${w.hr} bpm` : "", w.kcal ? `${round(w.kcal)} kcal` : ""].filter(Boolean);
       const title = esc(woTitle(w));
+      const strava = ((w.source || "").match(/https:\/\/(?:www\.)?strava\.com\/activities\/\d+/) || [])[0]
+        || (ph.find(p => p.strava) || {}).strava;
+      const mediaOpen = strava ? `<a class="hl-media" href="${strava}" target="_blank" rel="noopener" title="Open this activity on Strava">` : `<div class="hl-media">`;
       return `<article class="hl ${sceneKey(w).toLowerCase()}">
-        <div class="hl-media">${bg}
+        ${mediaOpen}${bg}
           <div class="hl-body">
             <div class="hl-top"><span class="hl-sport">${{ Hiit: "HIIT", Dance: "Dance" }[sceneKey(w)] || w.sport}</span>${w.race || /\btri\b|half marathon|race leg|marathon/i.test(w.desc || "") ? '<span class="hl-race">Race</span>' : ""}</div>
             <div class="hl-stats">${stats.map(x => `<span>${x}</span>`).join("")}</div>
           </div>
-        </div>
-        <div class="hl-cap"><div class="hl-title" title="${title}">${title}</div><div class="hl-date">${fmtLong(w.date)}</div></div></article>`;
+          ${strava ? '<span class="hl-strava">Strava ↗</span>' : ""}
+        ${strava ? "</a>" : "</div>"}
+        <div class="hl-cap"><div class="hl-title" title="${title}">${title}</div><div class="hl-date">${fmtLong(w.date)}${strava ? ` · <a href="${strava}" target="_blank" rel="noopener">View on Strava</a>` : ""}</div></div></article>`;
     }).join("");
     return `<div class="hl-wrap"><div class="hl-row" id="hl-row" tabindex="0" aria-label="Workout highlights">${cards}</div>
       <div class="hl-nav"><button class="chip" id="hl-prev" aria-label="Previous highlight">◀</button><span id="hl-dots"></span><button class="chip" id="hl-next" aria-label="Next highlight">▶</button><button class="chip" id="hl-play" aria-label="Pause auto-play">❚❚ Pause</button></div></div>`;
