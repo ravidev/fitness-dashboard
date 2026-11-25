@@ -146,46 +146,34 @@ tr.done td:first-child { box-shadow: inset 3px 0 0 var(--good); }
 .win-bar .chip:disabled { opacity: .4; cursor: default; }
 .win-marks { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-left: auto; font-size: 12.5px; color: var(--muted); }
 
-/* ── Seasonal banner (rainy days) ──────────────────────────── */
+/* ── Seasonal banner (Thanksgiving week) ───────────────────── */
 .festive {
   position: relative; overflow: hidden; margin: 12px auto 0; max-width: 1280px; width: calc(100% - 48px);
-  border-radius: 14px; color: #eef4fb;
-  background: linear-gradient(180deg, #3d4b5c 0%, #4f6075 45%, #66788c 100%);
-  box-shadow: 0 6px 24px rgba(40, 55, 75, .28);
+  border-radius: 14px; color: #fff8ee;
+  background: linear-gradient(120deg, #7a2e12 0%, #b4501c 40%, #d9822b 75%, #e8a94a 100%);
+  box-shadow: 0 6px 24px rgba(122, 46, 18, .3);
 }
 @media (max-width: 560px) { .festive { width: calc(100% - 32px); } }
+.festive::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 15% 120%, rgba(255,214,140,.35), transparent 45%), radial-gradient(circle at 90% -20%, rgba(255,230,180,.25), transparent 40%); animation: warm 6s ease-in-out infinite alternate; }
+@keyframes warm { to { opacity: .55; } }
 .festive-row { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 16px; padding: 16px 44px 18px 16px; text-align: center; }
-.festive-text b { display: block; font-size: 22px; letter-spacing: .01em; color: #ffffff; text-shadow: 0 1px 10px rgba(160, 200, 240, .45); }
-.festive-text span { font-size: 13.5px; color: #d9e4f0; }
-.festive-close { position: absolute; top: 8px; right: 10px; width: 28px; height: 28px; border: 0; border-radius: 50%; background: rgba(255,255,255,.14); color: #eef4fb; font-size: 18px; line-height: 1; cursor: pointer; }
-.festive-close:hover { background: rgba(255,255,255,.26); }
-
-/* small rain cloud icon with dripping drops */
-.rcloud { position: relative; flex: none; width: 48px; height: 40px; }
-.rcloud::before { content: ""; position: absolute; left: 4px; top: 10px; width: 40px; height: 16px; border-radius: 10px; background: #e6edf5;
-  box-shadow: 8px -7px 0 2px #e6edf5, 20px -4px 0 1px #e6edf5; }
-.rcloud i { position: absolute; top: 27px; width: 2px; height: 8px; border-radius: 2px; background: #9ccaf2; animation: drip 1s linear infinite; }
-.rcloud i:nth-child(1) { left: 14px; } .rcloud i:nth-child(2) { left: 24px; animation-delay: .35s; } .rcloud i:nth-child(3) { left: 34px; animation-delay: .7s; }
-.rcloud:last-of-type i { animation-duration: 1.15s; }
-@keyframes drip { 0% { transform: translateY(-3px); opacity: 0; } 25% { opacity: 1; } 100% { transform: translateY(12px); opacity: 0; } }
-
-/* drifting clouds, falling rain, puddle ripples */
+.festive-text b { display: block; font-size: 22px; letter-spacing: .01em; color: #fff; text-shadow: 0 1px 10px rgba(80, 20, 0, .45); }
+.festive-text q { display: block; margin-top: 4px; font-size: 14px; font-style: italic; color: #ffecd2; quotes: "\201C" "\201D"; }
+.festive-close { position: absolute; top: 8px; right: 10px; width: 28px; height: 28px; border: 0; border-radius: 50%; background: rgba(255,255,255,.16); color: #fff8ee; font-size: 18px; line-height: 1; cursor: pointer; }
+.festive-close:hover { background: rgba(255,255,255,.28); }
+.tg-ic { flex: none; font-size: 34px; line-height: 1; display: inline-block; animation: sway2 2.6s ease-in-out infinite alternate; transform-origin: 50% 90%; filter: drop-shadow(0 2px 4px rgba(0,0,0,.25)); }
+.tg-ic.r { animation-delay: -1.3s; }
+@keyframes sway2 { from { transform: rotate(-7deg); } to { transform: rotate(7deg); } }
 .fx { position: absolute; inset: 0; pointer-events: none; }
-.cloud { position: absolute; top: -14px; width: 180px; height: 46px; border-radius: 40px; background: rgba(255,255,255,.10); filter: blur(2px);
-  box-shadow: 40px -14px 0 6px rgba(255,255,255,.08), 90px -6px 0 2px rgba(255,255,255,.07); animation: drift 38s linear infinite; }
-.cloud.c2 { top: -4px; width: 140px; opacity: .8; animation-duration: 52s; animation-delay: -20s; }
-.cloud.c3 { top: -18px; width: 220px; opacity: .7; animation-duration: 64s; animation-delay: -41s; }
-@keyframes drift { from { transform: translateX(-260px); } to { transform: translateX(1400px); } }
-.drop { position: absolute; left: var(--x); top: -20px; width: 1.5px; height: 16px; border-radius: 1px;
-  background: linear-gradient(rgba(200,225,250,0), rgba(200,225,250,.75)); transform: rotate(12deg);
-  animation: fall var(--s, .9s) linear var(--d) infinite; }
-@keyframes fall { to { transform: translate(-22px, 120px) rotate(12deg); } }
-.ripple { position: absolute; bottom: 5px; left: var(--x); width: 18px; height: 5px; margin-left: -9px; border-radius: 50%; border: 1px solid rgba(210,230,250,.6);
-  opacity: 0; animation: ripple 2.4s ease-out var(--d) infinite; }
-@keyframes ripple { 0% { transform: scale(.2); opacity: .9; } 100% { transform: scale(2.2); opacity: 0; } }
-
-@media (max-width: 560px) { .festive-text b { font-size: 19px; } .rcloud, .cloud.c3 { display: none; } }
-@media (prefers-reduced-motion: reduce) { .rcloud i, .cloud, .drop, .ripple { animation: none; } .drop, .ripple { display: none; } }
+.leaf { position: absolute; left: var(--x); top: -30px; font-size: var(--z, 16px); font-style: normal; opacity: .9; animation: leaffall var(--s, 7s) linear var(--d) infinite; }
+@keyframes leaffall {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+  10% { opacity: .95; }
+  50% { transform: translate(28px, 70px) rotate(170deg); }
+  100% { transform: translate(-10px, 150px) rotate(360deg); opacity: 0; }
+}
+@media (max-width: 560px) { .festive-text b { font-size: 19px; } .festive-text q { font-size: 13px; } .tg-ic { display: none; } }
+@media (prefers-reduced-motion: reduce) { .leaf, .tg-ic, .festive::before { animation: none; } .leaf { display: none; } }
 
 /* ── Workout highlights ─────────────────────────────────────── */
 .hl-row { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(280px, 34%); gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 2px; outline: none; }
