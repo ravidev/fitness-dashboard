@@ -118,15 +118,21 @@
 
   function parseWorkouts(rows) {
     const h = findHeader(rows, "Date");
+    // find columns by their header, so new columns in the sheet don't shift anything
+    const hd = rows[h].map(x => String(x || "").trim().toLowerCase());
+    const at = (name, dflt) => { const i = hd.indexOf(name); return i >= 0 ? i : dflt; };
+    const C = { type: at("activity type", 2), kcal: at("calories", 3), desc: at("description", 4), dur: at("duration", 5),
+      dist: at("distance", 6), hr: at("avg hr", 7), src: at("source", 9) };
     const out = []; let cur = null;
     for (const r of rows.slice(h + 1)) {
       if (isIsoDate(r[0])) cur = r[0];
       else if (r[0]) continue;
-      if (!cur || !r[2]) continue;
+      if (!cur || !r[C.type]) continue;
+      const type = r[C.type];
       out.push({
-        date: cur, type: r[2], sport: sport(r[2]), race: /^race/i.test(r[2]),
-        kcal: num(r[3]), desc: r[4], min: minutes(r[5]), mi: miles(r[6]), hr: num(r[7]),
-        estimated: /est\./i.test(r[3]), source: r[9],
+        date: cur, type, sport: sport(type), race: /^race/i.test(type),
+        kcal: num(r[C.kcal]), desc: r[C.desc], min: minutes(r[C.dur]), mi: miles(r[C.dist]), hr: num(r[C.hr]),
+        estimated: /est\./i.test(r[C.kcal]), source: r[C.src],
       });
     }
     return out.sort((a, b) => a.date.localeCompare(b.date));
