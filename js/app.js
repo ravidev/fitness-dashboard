@@ -424,6 +424,8 @@
       <svg class="ico pose" viewBox="0 0 64 40" aria-hidden="true"><circle cx="54" cy="12" r="5"/><path d="M48 16L14 26M30 21l-2 14M48 16l2 18M14 26l-8 8"/></svg></div>`,
   };
   const HL_SPORTS = ["Swim", "Bike", "Run", "Strength", "Cardio", "Dance"];
+  // int1/int2 interval entries are logged but not shown as highlight cards
+  const inHighlights = w => HL_SPORTS.includes(w.sport) && !/^int\s*\d/i.test(`${w.type || ""} ${w.desc || ""}`.trim());
   const sceneKey = w => w.sport !== "Strength" ? w.sport : /zumba|u-?jam|bombay jam|dance/i.test(`${w.type} ${w.desc || ""}`) ? "Dance" : /hiit|pilates|yoga|barre/i.test(`${w.type} ${w.desc || ""}`) ? "Hiit" : w.sport;
   // Workout title for cards: drop Strava tags and the trailing start/elapsed details, keep the rest as written
   const woTitle = w => (w.desc || w.type || "")
@@ -638,12 +640,12 @@
     const woAll = inRange(d.allWorkouts), skipped = woAll.filter(w => !w.counted);
     const rowsFor = () => trainFilter === "All" ? woAll : woAll.filter(w => w.sport === trainFilter);
 
-    const sbr = wo.filter(w => HL_SPORTS.includes(w.sport)).slice().reverse();
+    const sbr = wo.filter(inHighlights).slice().reverse();
     const hasPhoto = w => (d.photos || []).some(p => p.date === w.date && (!p.sport || p.sport === w.sport));
     // latest 12, plus any older ones in range that have photos
     let hlList = sbr.filter((w, i) => i < 12 || hasPhoto(w));
     const hlFallback = !hlList.length;
-    if (hlFallback) hlList = d.workouts.filter(w => HL_SPORTS.includes(w.sport)).slice(-6).reverse();
+    if (hlFallback) hlList = d.workouts.filter(inHighlights).slice(-6).reverse();
     $("#page-training").innerHTML = `<h2>Training</h2>
     ${hlList.length ? `<div class="grid">${card("c12", "Highlights", `${hlFallback ? "Latest workouts (none in " + rangeLabel() + ")" : `Swims, rides, runs and gym sessions · ${rangeLabel()}`} · auto-plays, swipe or use the arrows`, highlights(hlList))}</div>` : ""}
     ${weekStrip()}
