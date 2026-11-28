@@ -101,15 +101,21 @@
   // ── parsers ─────────────────────────────────────────────────
   function parseSleep(rows) {
     const h = findHeader(rows, "Date");
+    const hd = rows[h].map(x => String(x || "").trim().toLowerCase());
+    const at = n => hd.findIndex(x => x.startsWith(n));
+    const iTot = at("total sleep"), iAdj = at("nap-adjusted score"), iAdjL = at("nap-adjusted label");
     const out = [];
     for (const r of rows.slice(h + 1)) {
       if (!isIsoDate(r[0])) continue;
       // bedtime as hours after 6 PM so midnight-crossing sorts correctly; accepts "23:13" and "12:24 AM"
       const bed = r[1], bedRel = clockToRel(bed);
+      const sleepMin = hm(r[3]), nap = num(r[11]) || 0;
       out.push({
-        date: r[0], bed, wake: r[2], sleepMin: hm(r[3]),
+        date: r[0], bed, wake: r[2], sleepMin,
         deep: num(r[4]), light: num(r[5]), rem: num(r[6]), awake: num(r[7]),
-        score: num(r[8]), label: r[9], hrv: num(r[10]), nap: num(r[11]) || 0,
+        score: num(r[8]), label: r[9], hrv: num(r[10]), nap,
+        totalMin: (iTot >= 0 && hm(r[iTot])) || (sleepMin != null ? sleepMin + nap : null),
+        adjScore: iAdj >= 0 ? num(r[iAdj]) : null, adjLabel: iAdjL >= 0 ? r[iAdjL] : "",
         bedRel,
       });
     }
@@ -278,7 +284,7 @@
       const weights = [...wMap].map(([date, weight]) => ({ date, weight })).sort((a, b) => a.date.localeCompare(b.date));
       // Sleep hours: historical, with the Garmin Sleep tab winning where it has the night
       const sMap = new Map(daily.filter(x => x.hours).map(x => [x.date, { date: x.date, hours: x.hours, bedRel: x.bedRel, eff: x.eff }]));
-      for (const s of sleep) if (s.sleepMin) sMap.set(s.date, { date: s.date, hours: s.sleepMin / 60, bedRel: s.bedRel, score: s.score });
+      for (const s of sleep) if (s.sleepMin) sMap.set(s.date, { date: s.date, hours: s.sleepMin / 60, napH: (s.nap || 0) / 60, totalH: (s.totalMin || s.sleepMin) / 60, bedRel: s.bedRel, score: s.score });
       const sleepHistory = [...sMap.values()].sort((a, b) => a.date.localeCompare(b.date));
       const steps = daily.filter(x => x.steps).map(x => ({ date: x.date, steps: x.steps, mi: x.mi }));
       const bp = daily.filter(x => x.sys && x.dia).map(x => ({ date: x.date, sys: x.sys, dia: x.dia }));

@@ -275,13 +275,13 @@
     const counts = ["EXCELLENT", "GOOD", "FAIR", "POOR"].map(l => sl.filter(x => x.label === l).length);
     $("#page-sleep").innerHTML = `<h2>Sleep</h2>
     <div class="grid">
-      ${tile("Avg asleep", hhmm(avg(sl.map(x => x.sleepMin))), "", `target ${T.sleepHours} h`, avg(sl.map(x => x.sleepMin)) / (T.sleepHours * 60) * 100)}
+      ${tile("Avg total sleep", hhmm(avg(sl.map(x => x.totalMin))), "", `night ${hhmm(avg(sl.map(x => x.sleepMin)))} + naps ${hhmm(avg(sl.map(x => x.nap || 0)))} · ${sl.filter(x => x.totalMin >= T.sleepHours * 60).length} of ${sl.length} days ≥ ${T.sleepHours} h`, avg(sl.map(x => x.totalMin)) / (T.sleepHours * 60) * 100)}
       ${tile("Avg score", round(avg(sl.map(x => x.score))), "/100", `${counts[0]} excellent · ${counts[1]} good · ${counts[2]} fair · ${counts[3]} poor`)}
       ${tile("Avg overnight HRV", round(avg(sl.map(x => x.hrv)), 1), "ms", `range ${Math.min(...sl.map(x => x.hrv))}–${Math.max(...sl.map(x => x.hrv))} ms`)}
       ${tile("Avg bedtime", fmtBed(avg(sl.map(x => x.bedRel))), "", `${sl.filter(x => x.bedRel != null && x.bedRel < 6).length} of ${sl.length} nights before midnight`)}
     </div>
     <div class="grid">
-      ${card("c12", "Time asleep", `${rangeLabel()} · dashed = ${T.sleepHours} h target · line = 7-night average`, canvas("sl-dur"))}
+      ${card("c12", "Total sleep: night + naps", `${rangeLabel()} · dashed = ${T.sleepHours} h target · line = 7-day average of total`, canvas("sl-dur"))}
     </div>
     <div class="grid">
       ${card("c8", "Sleep stages", "Minutes per night", canvas("sl-stages"))}
@@ -294,17 +294,21 @@
     <div class="grid">${card("c12", "Nightly detail", "Click a column to sort", sortableTable("sl-table", [
       { key: "date", label: "Wake date", fmt: v => fmtLong(v) },
       { key: "bed", label: "Bed" }, { key: "wake", label: "Wake" },
-      { key: "sleepMin", label: "Asleep", num: 1, fmt: hhmm },
+      { key: "sleepMin", label: "Night", num: 1, fmt: hhmm }, { key: "nap", label: "Nap", num: 1, fmt: v => v ? hhmm(v) : "–" }, { key: "totalMin", label: "Total", num: 1, fmt: hhmm },
       { key: "deep", label: "Deep", num: 1 }, { key: "rem", label: "REM", num: 1 }, { key: "light", label: "Light", num: 1 }, { key: "awake", label: "Awake", num: 1 },
-      { key: "score", label: "Score", num: 1 }, { key: "label", label: "Label" }, { key: "hrv", label: "HRV", num: 1 }, { key: "nap", label: "Nap (min)", num: 1 },
+      { key: "score", label: "Score", num: 1 }, { key: "label", label: "Label" }, { key: "adjScore", label: "With nap", num: 1, fmt: v => v ?? "–" }, { key: "hrv", label: "HRV", num: 1 },
     ], [...sl].reverse()))}</div>`;
 
-    const hrs = sl.map(x => x.sleepMin / 60);
+    const hrs = sl.map(x => x.sleepMin / 60), naps = sl.map(x => (x.nap || 0) / 60), tot = sl.map(x => (x.totalMin || x.sleepMin) / 60);
+    const durOpts = baseOpts({ plugins: { ...baseOpts().plugins, tooltip: { ...baseOpts().plugins.tooltip, callbacks: {
+      label: c => `${c.dataset.label}: ${hhmm(c.parsed.y * 60)}`, footer: it => it.length ? `Total: ${hhmm(tot[it[0].dataIndex] * 60)}` : "" } } } });
+    durOpts.scales.x.stacked = true; durOpts.scales.y.stacked = true;
     chart("sl-dur", { data: { labels, datasets: [
-      line("7-night avg", rolling(hrs, 7), css("--ink-2")),
-      goal(`${T.sleepHours} h target`, sl.length, T.sleepHours, css("--good")),
-      bar("Hours asleep", hrs, sl.map(x => x.sleepMin >= T.sleepHours * 60 ? css("--s1") : css("--s1") + "99")),
-    ] }, options: baseOpts({ plugins: { ...baseOpts().plugins, tooltip: { ...baseOpts().plugins.tooltip, callbacks: { label: c => `${c.dataset.label}: ${hhmm(c.parsed.y * 60)}` } } } }) });
+      { ...line("7-day avg, total", rolling(tot, 7), css("--ink-2")), stack: "avg" },
+      { ...goal(`${T.sleepHours} h target`, sl.length, T.sleepHours, css("--good")), stack: "goal" },
+      { ...bar("Night", hrs, sl.map((x, i) => tot[i] >= T.sleepHours ? css("--s1") : css("--s1") + "99")), stack: "s" },
+      { ...bar("Nap", naps, css("--s5")), stack: "s" },
+    ] }, options: durOpts });
 
     const stageOpts = baseOpts(); stageOpts.scales.x.stacked = true; stageOpts.scales.y.stacked = true;
     chart("sl-stages", { type: "bar", data: { labels, datasets: [
@@ -616,7 +620,7 @@
     };
     const hrs = sum(tw.wo.map(w => w.min)) / 60, lhrs = sum(lw.wo.map(w => w.min)) / 60;
     const sports = [...new Set(tw.wo.map(w => w.sport))];
-    const slA = avg(tw.sl.map(x => x.hours)), slOK = tw.sl.filter(x => x.hours >= T.sleepHours).length;
+    const slT = x => x.totalH ?? x.hours, slA = avg(tw.sl.map(slT)), slOK = tw.sl.filter(x => slT(x) >= T.sleepHours).length, napD = tw.sl.filter(x => x.napH).length;
     const late = tw.sl.filter(x => x.bedRel != null && x.bedRel >= 24).length;
     const pDays = tw.nu.filter(x => x.protein), pHit = pDays.filter(x => x.protein >= T.protein).length;
     const kA = avg(tw.nu.map(x => x.kcal)), lkA = avg(lw.nu.map(x => x.kcal));
@@ -625,7 +629,7 @@
     const cell = (label, value, note, c, pct) => `<div class="ws-cell">${dot(c)}<div class="ws-l">${label}</div><div class="ws-v">${value}</div><div class="ws-n">${note || "&nbsp;"}</div>${pct != null ? `<div class="ws-bar"><i class="${c}" style="--p:${Math.max(4, Math.min(100, pct))}%"></i></div>` : ""}</div>`;
     const cells = [
       cell("Training", `${round(hrs, 1)} h · ${tw.wo.length} sessions`, sports.length ? sports.join(", ") + " · " + cmp(hrs, lhrs, " h", 1, true) : "nothing logged yet", tw.wo.length ? "g" : "a", lhrs ? hrs / lhrs * 100 : (hrs ? 100 : 0)),
-      cell("Sleep", slA ? hhmm(slA * 60) + " avg" : "–", tw.sl.length ? `${slOK} of ${tw.sl.length} nights ≥ ${T.sleepHours} h${late ? ` · ${late} after midnight` : ""}` : "", slA == null ? "" : slA >= T.sleepHours ? "g" : slA >= T.sleepHours - 0.75 ? "a" : "r", slA != null ? slA / T.sleepHours * 100 : null),
+      cell("Sleep", slA ? hhmm(slA * 60) + " avg" : "–", tw.sl.length ? `incl. naps${napD ? ` (${napD} days)` : ""} · ${slOK} of ${tw.sl.length} days ≥ ${T.sleepHours} h${late ? ` · ${late} after midnight` : ""}` : "", slA == null ? "" : slA >= T.sleepHours ? "g" : slA >= T.sleepHours - 0.75 ? "a" : "r", slA != null ? slA / T.sleepHours * 100 : null),
       cell("Protein", pDays.length ? `${pHit} of ${pDays.length} days` : "–", pDays.length ? `hit ${T.protein} g · avg ${round(avg(pDays.map(x => x.protein)))} g` : "", !pDays.length ? "" : pHit / pDays.length >= 0.7 ? "g" : pHit / pDays.length >= 0.4 ? "a" : "r", pDays.length ? avg(pDays.map(x => x.protein)) / T.protein * 100 : null),
       cell("Calories", kA ? `${round(kA)} avg` : "–", kA ? `target ${round(T.kcal)} · ${cmp(kA, lkA, "", 0, null)}` : "", kA == null ? "" : Math.abs(kA - T.kcal) <= 250 ? "g" : kA - T.kcal <= 600 ? "a" : "r", kA != null ? kA / T.kcal * 100 : null),
       cell("Weight", wNow ? `${round(wNow, 1)} lb` : "–", wNow ? `${fmtDay(tw.wt.at(-1).date)} · ${cmp(wNow, wPrev, " lb", 1, false) || "goal " + T.weightGoal}` : "no weigh-in yet", wNow == null ? "" : wPrev == null || wNow <= wPrev ? "g" : wNow - wPrev < 1 ? "a" : "r"),
